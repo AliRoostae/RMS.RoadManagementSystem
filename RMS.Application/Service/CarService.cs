@@ -3,10 +3,9 @@ using Mapster;
 using RMS.Application.Controlr;
 using RMS.Application.Excep;
 using RMS.Application.Interface;
-using RMS.Shared.Contracts.Commands;
-using RMS.Shared.Contracts.DTOs;
 using RMS.Domain.Entities;
 using RMS.Domain.Interfaces;
+using RMS.Shared.Contracts.Commands;
 using RMS.Shared.Contracts.Queries;
 using RMS.Shared.Contracts.Responses;
 using System.ComponentModel.DataAnnotations;
@@ -33,7 +32,7 @@ internal sealed class CarService(
 
         var insert = argo.Adapt<CarEntities>();
         insert.Id = Guid.NewGuid();
-        
+
         if (await _repCar.AddAsync(insert, token)) return insert.Id;
         else return Guid.Empty;
     }
@@ -62,13 +61,13 @@ internal sealed class CarService(
     {
         if (!argo.TryValidate(out var validationErrors)) throw new ValidationException(validationErrors.JsonErrors());
         if (argo.Id == Guid.Empty) throw new ValidationException("شناسهٔ خودرو الزامی است.");
-        var find =await _repCar.GetAsync(argo.Id, token);
-        if(find == null) throw new KeyNotFoundException(" کد ارسالی خودرو  موجود نیست ");
+        var find = await _repCar.GetAsync(argo.Id, token);
+        if (find == null) throw new KeyNotFoundException(" کد ارسالی خودرو  موجود نیست ");
         argo.PlateNumber = argo.PlateNumber.NormalizeUnicode();
         argo.DriverLicNumber = argo.DriverLicNumber.NormalizeUnicode();
         argo.DriverPhone = argo.DriverPhone.NormalizeUnicode();
         if (await _repCar.DuplicatePlateAsync(argo.PlateNumber, find.FkAccident, argo.Id, token)) throw new InvalidOperationException(" شماره پلاک تکراری است ");
-    
+
 
         return await _repCar.UpdateAsync(argo, argo.Id, token);
 

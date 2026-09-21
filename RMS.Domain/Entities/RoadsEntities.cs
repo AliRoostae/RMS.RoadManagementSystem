@@ -1,7 +1,5 @@
 using NetTopologySuite.Geometries;
 using RMS.Shared.Validation;
-using RMS.Shared.Contracts.DTOs;
-using RMS.Domain.Entities;
 using System.ComponentModel.DataAnnotations;
 
 namespace RMS.Domain.Entities;
@@ -9,7 +7,7 @@ namespace RMS.Domain.Entities;
 /// <summary>
 /// موجودیت پایدار یک راه یا محدودهٔ جغرافیایی و حوادث ثبت‌شده در آن را نمایش می‌دهد.
 /// </summary>
-public class RoadsEntities 
+public class RoadsEntities
 {
 
     /// <summary>شناسهٔ یکتای راه یا محدودهٔ جغرافیایی.</summary>

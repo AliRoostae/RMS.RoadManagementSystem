@@ -1,5 +1,5 @@
-using RMS.Shared.Contracts.DTOs;
 using RMS.Domain.Entities;
+using RMS.Shared.Contracts.DTOs;
 using RMS.Shared.Contracts.Queries;
 using RMS.Shared.Contracts.Responses;
 

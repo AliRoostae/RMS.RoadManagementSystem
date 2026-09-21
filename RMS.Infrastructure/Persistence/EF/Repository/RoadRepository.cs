@@ -3,12 +3,12 @@ using NetTopologySuite;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.Operation.Distance;
 using NetTopologySuite.Simplify;
-using RMS.Shared.Contracts.DTOs;
 using RMS.Domain.Entities;
 using RMS.Domain.Interfaces;
+using RMS.Infrastructure.Persistence.EF.Core;
+using RMS.Shared.Contracts.DTOs;
 using RMS.Shared.Contracts.Queries;
 using RMS.Shared.Contracts.Responses;
-using RMS.Infrastructure.Persistence.EF.Core;
 
 namespace RMS.Infrastructure.Persistence.EF.Repository;
 
@@ -30,7 +30,7 @@ public sealed class RoadRepository
     /// <inheritdoc/>
     public async Task<bool> DeleteAsync(Guid argo, CancellationToken token = default)
     {
-        var find = await _db.RoadsDs.FirstOrDefaultAsync(i => i.Id == argo,token);
+        var find = await _db.RoadsDs.FirstOrDefaultAsync(i => i.Id == argo, token);
         if (find == null) return false;
         _db.RoadsDs.Remove(find);
         return await _db.SaveChangesAsync(token) > 0;
@@ -205,13 +205,13 @@ IQueryable<RoadsEntities> query)
     /// <inheritdoc/>
     public async Task<bool> UpdateAsync(BaseRoads argo, Guid id, CancellationToken token = default)
     {
-        var find = await _db.RoadsDs.FirstOrDefaultAsync(i => i.Id == id,token);
+        var find = await _db.RoadsDs.FirstOrDefaultAsync(i => i.Id == id, token);
         if (find == null) return false;
         _db.Entry(find).CurrentValues.SetValues(argo);
         return await _db.SaveChangesAsync(token) >= 0;
     }
 
-    public async Task<bool> AnyAsync(Guid id, CancellationToken token = default)=>await _db.RoadsDs.AsNoTracking().AnyAsync(i=> i.Id== id,token);
+    public async Task<bool> AnyAsync(Guid id, CancellationToken token = default) => await _db.RoadsDs.AsNoTracking().AnyAsync(i => i.Id == id, token);
 
     private static double HaversineMeters(
         double latitude1,
@@ -231,5 +231,5 @@ IQueryable<RoadsEntities> query)
                 Math.Pow(Math.Sin(longitudeDelta / 2d), 2d);
         return earthRadiusMeters * 2d * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1d - a));
     }
-   
+
 }

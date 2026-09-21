@@ -2,9 +2,9 @@ using Microsoft.AspNetCore.Mvc;
 using RMS.Api.Authorization;
 using RMS.Application.Interface;
 using RMS.Shared.Contracts.Commands;
-using RMS.Shared.Enums;
 using RMS.Shared.Contracts.Queries;
 using RMS.Shared.Contracts.Responses;
+using RMS.Shared.Enums;
 
 namespace RMS.Api.Controllers;
 

@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Configuration;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.Simplify;
 using System.Globalization;

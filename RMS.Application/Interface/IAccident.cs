@@ -42,5 +42,5 @@ public interface IAccident
 
     Task<IReadOnlyList<AccidentMapPointResponse>> GetMapAsync(AccidentMapQuery query, CancellationToken token = default);
 
-   
+
 }

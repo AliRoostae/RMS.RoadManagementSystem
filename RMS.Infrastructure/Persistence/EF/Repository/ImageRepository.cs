@@ -2,8 +2,8 @@ using ImageMagick;
 using Microsoft.EntityFrameworkCore;
 using RMS.Domain.Entities;
 using RMS.Domain.Interfaces;
-using RMS.Shared.Contracts.Responses;
 using RMS.Infrastructure.Persistence.EF.Core;
+using RMS.Shared.Contracts.Responses;
 
 namespace RMS.Infrastructure.Persistence.EF.Repository;
 
@@ -22,27 +22,27 @@ public sealed class ImageRepository
     public async Task<bool> AddAsync(ImageEntities argo, CancellationToken token = default)
     {
         await _db.ImageDs.AddAsync(argo, token);
-        return await _db.SaveChangesAsync(token) >0;
+        return await _db.SaveChangesAsync(token) > 0;
 
     }
 
     /// <summary>همهٔ تصاویر یک حادثه را حذف می‌کند و نشانی فایل‌ها را برمی‌گرداند.</summary>
     public async Task<IList<string>> DeleteAllAsync(Guid accidentId, CancellationToken token = default)
     {
-       var find =  _db.ImageDs.Where(i=> i.FkAccident == accidentId);
+        var find = _db.ImageDs.Where(i => i.FkAccident == accidentId);
         _db.ImageDs.RemoveRange(find);
         var result = await find.Select(i => i.ImageUrls).ToListAsync(token);
-         await _db.SaveChangesAsync(token);
+        await _db.SaveChangesAsync(token);
         return result;
     }
 
     /// <summary>یک تصویر را حذف می‌کند و نشانی فایل حذف‌شده را برمی‌گرداند.</summary>
     public async Task<string> DeleteAsync(Guid imageId, CancellationToken token = default)
     {
-        var find =await _db.ImageDs.FirstOrDefaultAsync(i => i.Id == imageId,token);
+        var find = await _db.ImageDs.FirstOrDefaultAsync(i => i.Id == imageId, token);
         if (find == null) return string.Empty;
         _db.ImageDs.Remove(find);
-         await _db.SaveChangesAsync(token) ;
+        await _db.SaveChangesAsync(token);
         return find.ImageUrls;
     }
 
@@ -64,7 +64,7 @@ IQueryable<ImageEntities> query)
     /// <summary>تصاویر یک حادثه را بدون tracking می‌خواند.</summary>
     public async Task<IReadOnlyList<ImageResponse>> GetAllAsync(Guid accidentId, CancellationToken token = default)
     {
-        var sor= _db.ImageDs.AsNoTracking().Where(I=> I.FkAccident == accidentId);
+        var sor = _db.ImageDs.AsNoTracking().Where(I => I.FkAccident == accidentId);
 
         return await ProjectToResponse(sor).ToListAsync(token);
     }
@@ -74,15 +74,15 @@ IQueryable<ImageEntities> query)
     {
         var sor = _db.ImageDs.AsNoTracking().Where(I => I.Id == imageId); ;
 
-        return await ProjectToResponse(sor).FirstOrDefaultAsync(I => I.Id == imageId,token);
+        return await ProjectToResponse(sor).FirstOrDefaultAsync(I => I.Id == imageId, token);
     }
 
 
-  
+
 
 
     /// <summary>فایل تصویر را با کنترل مسیر امن از web root حذف می‌کند.</summary>
-    public async Task RemoveImg(string imageUrl ,string WebRootPath)
+    public async Task RemoveImg(string imageUrl, string WebRootPath)
     {
         try
         {

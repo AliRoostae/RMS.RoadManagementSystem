@@ -1,7 +1,7 @@
 using RMS.Domain.Entities;
+using RMS.Domain.Security;
 using RMS.Shared.Contracts.Queries;
 using RMS.Shared.Contracts.Responses;
-using RMS.Domain.Security;
 
 namespace RMS.Domain.Interfaces;
 

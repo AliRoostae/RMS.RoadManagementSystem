@@ -1,6 +1,6 @@
 
-using RMS.Shared.Contracts.DTOs;
 using RMS.Domain.Entities;
+using RMS.Shared.Contracts.DTOs;
 using RMS.Shared.Contracts.Queries;
 using RMS.Shared.Contracts.Responses;
 
@@ -55,5 +55,5 @@ public interface IAccidentRepository
 
     Task<IReadOnlyList<AccidentMapPointResponse>> GetMapAsync(AccidentMapQuery query, CancellationToken token = default);
 
-   
+
 }

@@ -1,5 +1,5 @@
-using RMS.Shared.Enums;
 using RMS.Domain.Security;
+using RMS.Shared.Enums;
 
 namespace RMS.Domain.Interfaces;
 

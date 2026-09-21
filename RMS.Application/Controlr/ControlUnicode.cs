@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Text;
 
 namespace RMS.Application.Controlr;
 
-public static   class ControlUnicode
+public static class ControlUnicode
 {
 
     /// <summary>

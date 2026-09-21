@@ -1,6 +1,5 @@
-using RMS.Shared.Contracts.DTOs;
-using RMS.Shared.Contracts.Queries;
 using RMS.Shared.Contracts.Commands;
+using RMS.Shared.Contracts.Queries;
 using RMS.Shared.Contracts.Responses;
 
 
@@ -25,7 +24,7 @@ public interface IPassenger
     /// <summary>اطلاعات سرنشین یا رانندهٔ مشخص‌شده را پس از اعتبارسنجی به‌روزرسانی می‌کند.</summary>
     /// <param name="argo">مقادیر جدید شخص.</param>
     /// <param name="id">شناسهٔ یکتای شخص.</param>
- 
+
     /// <param name="token">توکن لغو عملیات.</param>
     /// <returns><see langword="true"/> در صورت یافتن و اجرای به‌روزرسانی؛ در غیر این صورت <see langword="false"/>.</returns>
     Task<bool> UpdateAsync(UpdatePassengerCommand command, CancellationToken token = default);

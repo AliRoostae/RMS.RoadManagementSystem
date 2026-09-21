@@ -1,10 +1,9 @@
 using Mapster;
 using RMS.Application.Excep;
 using RMS.Application.Interface;
-using RMS.Shared.Contracts.Commands;
-using RMS.Shared.Contracts.DTOs;
 using RMS.Domain.Entities;
 using RMS.Domain.Interfaces;
+using RMS.Shared.Contracts.Commands;
 using RMS.Shared.Contracts.Queries;
 using RMS.Shared.Contracts.Responses;
 using System.ComponentModel.DataAnnotations;
@@ -29,7 +28,7 @@ public sealed class AccidentService(
     public async Task<Guid> AddAsync(CreateAccidentCommand argo, CancellationToken token = default)
     {
         if (!argo.TryValidate(out var validationErrors)) throw new ValidationException(validationErrors.JsonErrors());
-        if (!await _repRoad.IsValidCoordinate(argo.Latitude, argo.Longitude, argo.FkIdRoad,token)) throw new InvalidOperationException("لوکشین ارسالی برای این جاده نیست ");
+        if (!await _repRoad.IsValidCoordinate(argo.Latitude, argo.Longitude, argo.FkIdRoad, token)) throw new InvalidOperationException("لوکشین ارسالی برای این جاده نیست ");
         var add = argo.Adapt<AccidentEntities>();
         add.Id = Guid.NewGuid();
         if (await _repAcc.AddAsync(add, token))
@@ -56,7 +55,7 @@ public sealed class AccidentService(
     {
         if (!argo.TryValidate(out var validationErrors)) throw new ValidationException(validationErrors.JsonErrors());
         if (argo.Id == Guid.Empty) throw new ValidationException("شناسهٔ حادثه الزامی است.");
-        if (!await _repRoad.IsValidCoordinate(argo.Latitude, argo.Longitude, argo.FkIdRoad,token)) throw new InvalidOperationException("لوکشین ارسالی برای این جاده نیست ");
+        if (!await _repRoad.IsValidCoordinate(argo.Latitude, argo.Longitude, argo.FkIdRoad, token)) throw new InvalidOperationException("لوکشین ارسالی برای این جاده نیست ");
 
         return await _repAcc.UpdateAsync(argo, argo.Id, token);
     }
@@ -72,7 +71,7 @@ public sealed class AccidentService(
         if (argo.Cause.HasValue && !Enum.IsDefined(argo.Cause.Value)) throw new ValidationException("علت حادثه نامعتبر است.");
         if (!Enum.IsDefined(argo.OrderBy)) throw new ValidationException("ترتیب نمایش حوادث نامعتبر است.");
         return await _repAcc.GetAllAsync(argo, token);
-    } 
+    }
 
     public Task<IReadOnlyList<AccidentMapPointResponse>> GetMapAsync(
         AccidentMapQuery query,
@@ -89,5 +88,5 @@ public sealed class AccidentService(
     }
 
 
-   
+
 }

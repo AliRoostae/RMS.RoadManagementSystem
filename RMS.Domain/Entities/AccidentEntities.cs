@@ -7,16 +7,16 @@ namespace RMS.Domain.Entities;
 /// <summary>
 /// موجودیت پایدار حادثهٔ رانندگی و ارتباط آن با راه، خودروها و عابر را نمایش می‌دهد.
 /// </summary>
-public class AccidentEntities 
+public class AccidentEntities
 {
     /// <summary>شناسهٔ یکتای حادثه.</summary>
-     [Key] 
+    [Key]
     public Guid Id { get; set; }
 
     /// <summary>
     /// شناسهٔ راه یا محدودهٔ جغرافیایی مرتبط با حادثه.
     /// </summary>
-  
+
     public Guid FkIdRoad { get; set; }
     /// <summary>
     /// عرض جغرافیایی (Latitude) محل تصادف
@@ -67,7 +67,7 @@ public class AccidentEntities
     /// الگوی هندسی و نوع برخورد وسایل نقلیه در تصادف
     /// </summary>
     public AccidentTypeEnums AccidentType { get; set; } = AccidentTypeEnums.Unknown;
-  
+
 
     /// <summary>راه یا محدودهٔ جغرافیایی مرتبط با حادثه.</summary>
     public RoadsEntities Road { get; set; } = null!;

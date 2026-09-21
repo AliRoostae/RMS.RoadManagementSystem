@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
-using RMS.Shared.Contracts.DTOs;
+using RMS.Domain.Entities;
 using RMS.Domain.Interfaces;
+using RMS.Infrastructure.Persistence.EF.Core;
+using RMS.Shared.Contracts.DTOs;
 using RMS.Shared.Contracts.Queries;
 using RMS.Shared.Contracts.Responses;
-using RMS.Infrastructure.Persistence.EF.Core;
-using RMS.Domain.Entities;
 
 
 namespace RMS.Infrastructure.Persistence.EF.Repository;
@@ -25,12 +25,12 @@ public sealed class AccidentRepository
         return await _db.SaveChangesAsync(token) > 0;
     }
 
-   
+
 
     /// <inheritdoc/>
     public async Task<bool> AnySubsetRoadAsync(Guid idRoad, CancellationToken token = default) => await _db.AccidentDs.AnyAsync(a => a.FkIdRoad == idRoad, token);
 
-   
+
 
     /// <inheritdoc/>
     public async Task<bool> DeleteAsync(Guid argo, CancellationToken token = default)
@@ -41,7 +41,7 @@ public sealed class AccidentRepository
         return await _db.SaveChangesAsync(token) > 0;
     }
 
-    
+
 
     /// <inheritdoc/>
     public async Task<PagedResponse<AccidentListItemResponse>> GetAllAsync(AccidentQuery argo, CancellationToken token = default)
@@ -142,7 +142,7 @@ public sealed class AccidentRepository
             .ToListAsync(token);
     }
 
- 
+
 
     /// <inheritdoc/>
     public async Task<AccidentResponse?> GetAsync(Guid id, CancellationToken token = default)

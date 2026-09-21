@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
-using RMS.Shared.Contracts.DTOs;
 using RMS.Domain.Entities;
 using RMS.Domain.Interfaces;
+using RMS.Infrastructure.Persistence.EF.Core;
+using RMS.Shared.Contracts.DTOs;
 using RMS.Shared.Contracts.Queries;
 using RMS.Shared.Contracts.Responses;
-using RMS.Infrastructure.Persistence.EF.Core;
 
 namespace RMS.Infrastructure.Persistence.EF.Repository;
 
@@ -152,7 +152,7 @@ public sealed class CarRepository
     /// <inheritdoc/>
     public async Task<bool> UpdateAsync(BaseCarEdit argo, Guid id, CancellationToken token = default)
     {
-        var find = await _db.CarDs.FirstOrDefaultAsync(i => i.Id == id,token);
+        var find = await _db.CarDs.FirstOrDefaultAsync(i => i.Id == id, token);
         if (find == null) return false;
         _db.Entry(find).CurrentValues.SetValues(argo);
 
@@ -164,8 +164,8 @@ public sealed class CarRepository
     public async Task<bool> AnyAsync(Guid idcar, CancellationToken token = default) =>
         await _db.CarDs.AsNoTracking().AnyAsync(_ => _.Id == idcar, token);
 
-    public  async Task<bool> CarIsAccidentAsync(Guid idCar, Guid idAccident, CancellationToken token)=> 
-        await _db.CarDs.AsNoTracking().AnyAsync(_ => _.Id == idCar && _.FkAccident==idAccident, token);
+    public async Task<bool> CarIsAccidentAsync(Guid idCar, Guid idAccident, CancellationToken token) =>
+        await _db.CarDs.AsNoTracking().AnyAsync(_ => _.Id == idCar && _.FkAccident == idAccident, token);
 
     public async Task<Guid> GetParentAsync(Guid idcar, CancellationToken token)
     {

@@ -2,10 +2,10 @@ using Mapster;
 using RMS.Application.Controlr;
 using RMS.Application.Excep;
 using RMS.Application.Interface;
-using RMS.Shared.Contracts.Commands;
-using RMS.Shared.Contracts.DTOs;
 using RMS.Domain.Entities;
 using RMS.Domain.Interfaces;
+using RMS.Shared.Contracts.Commands;
+using RMS.Shared.Contracts.DTOs;
 using RMS.Shared.Contracts.Queries;
 using RMS.Shared.Contracts.Responses;
 using RMS.Shared.Enums;
@@ -34,8 +34,8 @@ public sealed class PeopleService
         argo.InjuryPercentage = argo.TypePersonDamage == DamageTypePersonEnum.Fatal ? (byte)100 : argo.InjuryPercentage;
         var insert = argo.Adapt<PeopleEntities>();
         insert.Id = Guid.NewGuid();
-     
-        if (await _repPeople.AddAsync(insert,token))
+
+        if (await _repPeople.AddAsync(insert, token))
             return insert.Id;
         else return Guid.Empty;
 
@@ -65,11 +65,11 @@ public sealed class PeopleService
         if (!argo.TryValidate(out var validationErrors)) throw new ValidationException(validationErrors.JsonErrors());
         if (argo.Id == Guid.Empty) throw new ValidationException("شناسهٔ شخص الزامی است.");
         var idAccident = await _repPeople.GetParentAsync(argo.Id, token);
-        if(idAccident == Guid.Empty) throw new KeyNotFoundException("کد  ارسالی در عابر یافت نشد");
-      argo.InjuryPercentage = argo.TypePersonDamage == DamageTypePersonEnum.Fatal ? (byte)100 : argo.InjuryPercentage;
+        if (idAccident == Guid.Empty) throw new KeyNotFoundException("کد  ارسالی در عابر یافت نشد");
+        argo.InjuryPercentage = argo.TypePersonDamage == DamageTypePersonEnum.Fatal ? (byte)100 : argo.InjuryPercentage;
         argo.NationalCode = argo.NationalCode.NormalizeUnicode();
         if (await _repNativeCode.DuplicateNationalCodeEditAsync(argo.NationalCode, idAccident, argo.Id, true, token)) throw new InvalidOperationException("کد ملی یک بار در این تصادف ثبت شده");
-      
+
         var update = argo.Adapt<BasePeople>();
         update.FkAccident = idAccident;
         return await _repPeople.UpdateAsync(update, argo.Id, token);

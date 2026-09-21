@@ -23,7 +23,7 @@ public static class ValidationExtensions
         return Validator.TryValidateObject(model, context, results, validateAllProperties: true);
     }
 
-   
+
     /// <summary>فهرست خطاهای اعتبارسنجی را به متن JSON تبدیل می‌کند.</summary>
     /// <param name="argo">خطاهای اعتبارسنجی.</param>
     /// <returns>متن JSON شامل خطاهای اعتبارسنجی.</returns>

@@ -9,7 +9,7 @@ namespace RMS.Domain.Entities;
 /// <summary>
 /// موجودیت پایدار یک خودروی درگیر در حادثه و سرنشینان منتسب به آن را نمایش می‌دهد.
 /// </summary>
-public class CarEntities 
+public class CarEntities
 {
     /// <summary>شناسهٔ یکتای خودرو در سامانه.</summary>
     [Key]

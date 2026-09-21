@@ -2,10 +2,10 @@ using Mapster;
 using RMS.Application.Controlr;
 using RMS.Application.Excep;
 using RMS.Application.Interface;
-using RMS.Shared.Contracts.Commands;
-using RMS.Shared.Contracts.DTOs;
 using RMS.Domain.Entities;
 using RMS.Domain.Interfaces;
+using RMS.Shared.Contracts.Commands;
+using RMS.Shared.Contracts.DTOs;
 using RMS.Shared.Contracts.Queries;
 using RMS.Shared.Contracts.Responses;
 using RMS.Shared.Enums;
@@ -33,7 +33,7 @@ public sealed class PassengerService(
         if (accidentId == Guid.Empty) throw new KeyNotFoundException("خودروی ارسالی یافت نشد");
         if (await _repNativeCode.DuplicateNationalCodeAsync(argo.NationalCode, accidentId, token)) throw new InvalidOperationException("کد ملی یک بار در این تصادف ثبت شده");
         if (await _repPass.OneDriverValidAsync(argo.FkCar, argo.IsDriver, token)) throw new InvalidOperationException("برای این خودرو قبلا  راننده ثبت شده است ");
-        
+
         var insert = argo.Adapt<PassengerEntities>();
         insert.Id = Guid.NewGuid();
         if (await _repPass.AddAsync(insert, token))
@@ -66,7 +66,7 @@ public sealed class PassengerService(
         if (!argo.TryValidate(out var validationErrors)) throw new ValidationException(validationErrors.JsonErrors());
         if (argo.Id == Guid.Empty) throw new ValidationException("شناسهٔ سرنشین الزامی است.");
         var idcar = await _repPass.GetParentAsync(argo.Id, token);
-        if (idcar ==Guid.Empty) throw new KeyNotFoundException("کد  ارسالی در سرنشین یافت نشد");
+        if (idcar == Guid.Empty) throw new KeyNotFoundException("کد  ارسالی در سرنشین یافت نشد");
         if (await _repPass.OneDriverValidEditAsync(argo.Id, idcar, argo.IsDriver, token)) throw new InvalidOperationException("برای این خودرو قبلا  راننده ثبت شده است ");
         var idacc = await _repCar.GetParentAsync(idcar, token);
         if (idacc == Guid.Empty) throw new KeyNotFoundException("کد خودرو در حادثه یافت نشد");

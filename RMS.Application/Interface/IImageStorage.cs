@@ -1,6 +1,5 @@
-using RMS.Shared.Contracts.Responses;
-
 using RMS.Shared.Contracts.Commands;
+using RMS.Shared.Contracts.Responses;
 
 namespace RMS.Application.Interface;
 

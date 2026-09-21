@@ -10,7 +10,7 @@ namespace RMS.Domain.Entities;
 /// موجودیت پایدار راننده یا سرنشین یک خودرو را نمایش می‌دهد.
 /// هر نمونه فقط به یک خودرو منتسب است و حضور همان شخص در خودرویی دیگر باید به‌صورت نمونه‌ای مستقل ثبت شود.
 /// </summary>
-public class PassengerEntities 
+public class PassengerEntities
 {
 
     /// <summary>شناسهٔ یکتای سرنشین در سامانه.</summary>

@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
-using RMS.Shared.Contracts.DTOs;
 using RMS.Domain.Entities;
 using RMS.Domain.Interfaces;
+using RMS.Infrastructure.Persistence.EF.Core;
+using RMS.Shared.Contracts.DTOs;
 using RMS.Shared.Contracts.Queries;
 using RMS.Shared.Contracts.Responses;
-using RMS.Infrastructure.Persistence.EF.Core;
 
 namespace RMS.Infrastructure.Persistence.EF.Repository;
 
@@ -34,7 +34,7 @@ public sealed class PeopleRepository
         return await _db.SaveChangesAsync(token) > 0;
     }
 
-   
+
 
 
     /// <summary>تکراری‌بودن کد ملی را هنگام ویرایش، با صرف‌نظر از رکورد جاری، میان عابر بررسی می‌کند.</summary>
@@ -151,8 +151,8 @@ IQueryable<PeopleEntities> query)
 
     public async Task<Guid> GetParentAsync(Guid idPeople, CancellationToken token)
     {
-var find = await _db.PeopleDs.FirstOrDefaultAsync(i=> i.Id == idPeople, token);
-        return find?.FkAccident??Guid.Empty;
+        var find = await _db.PeopleDs.FirstOrDefaultAsync(i => i.Id == idPeople, token);
+        return find?.FkAccident ?? Guid.Empty;
     }
 
     private static string AccidentCode(Guid id) => $"ACC-{id.ToString("N")[..8].ToUpperInvariant()}";

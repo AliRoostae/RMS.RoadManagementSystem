@@ -1,8 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using RMS.Domain.Entities;
 using RMS.Shared.Enums;
-using System.Text.Json;
 
 namespace RMS.Infrastructure.Persistence.EF.Core;
 
@@ -15,7 +13,7 @@ public sealed class RmsDbContext : DbContext
     /// <param name="options">گزینه‌های پیکربندی EF Core برای این نشست.</param>
     public RmsDbContext(DbContextOptions<RmsDbContext> options) : base(options)
     {
-        
+
     }
 
     /// <summary>مجموعهٔ حوادث ثبت‌شده را ارائه می‌کند.</summary>

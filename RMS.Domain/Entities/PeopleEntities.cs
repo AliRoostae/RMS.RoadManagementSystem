@@ -8,7 +8,7 @@ namespace RMS.Domain.Entities;
 /// موجودیت پایدار شخص حاضر در حادثه را نمایش می‌دهد که به خودرویی منتسب نیست؛ مانند عابر پیاده.
 /// هر نمونه فقط به یک حادثه تعلق دارد و حضور همان شخص در حادثه‌ای دیگر باید به‌صورت نمونه‌ای مستقل ثبت شود.
 /// </summary>
-public class PeopleEntities 
+public class PeopleEntities
 {
     /// <summary>شناسهٔ یکتای شخص در سامانه.</summary>
     [Key]
