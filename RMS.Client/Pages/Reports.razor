@@ -11,6 +11,10 @@
 
 <PageHeader Title="گزارش‌ها و تحلیل داده" Eyebrow="هوش مدیریتی" Description="تحلیل تجمیعی سمت سرور با پاسخ سبک و بهینه">
     <Actions>
+        @if (CanCarsReport)
+        {
+            <a class="btn btn-light app-button" href="/reports/cars"><i class="bi bi-car-front"></i> گزارش خودروها</a>
+        }
         <button class="btn btn-light app-button" disabled title="API خروجی گزارش هنوز پیاده‌سازی نشده است"><i class="bi bi-download"></i> دریافت گزارش</button>
         <button class="btn btn-primary app-button" @onclick="ApplyFiltersAsync" disabled="@isLoading"><i class="bi bi-sliders"></i> به‌روزرسانی تحلیل</button>
     </Actions>
@@ -68,6 +72,7 @@ else
     private string? pageError;
 
     private bool CanAccess => AuthenticationState.HasPermission(UserSection.Reports, UserAccessOperation.Report);
+    private bool CanCarsReport => CanAccess && AuthenticationState.HasPermission(UserSection.Cars, UserAccessOperation.Report);
     private bool CanFilterByRoad => AuthenticationState.HasPermission(UserSection.Roads, UserAccessOperation.Report);
 
     private string InsightText

@@ -1,0 +1,266 @@
+@page "/reports/cars"
+@attribute [Authorize]
+@inject CarApiService CarApi
+@inject LookupApiService LookupApi
+@inject RmsAuthenticationStateProvider AuthenticationState
+
+<PageTitle>گزارش خودروها | راه‌بان کیان</PageTitle>
+
+<PageHeader Title="گزارش خودروها" Eyebrow="گزارشات" Description="گزارش فقط‌خواندنی خودروها بر اساس فیلترهای انتخاب‌شده">
+    <Actions>
+        <a class="btn btn-light app-button" href="/reports"><i class="bi bi-arrow-right"></i> بازگشت به گزارشات</a>
+        @if (hasSearched && rows.Count > 0)
+        {
+            <span class="report-result-count"><i class="bi bi-list-check"></i> @Persian(totalCount) رکورد</span>
+        }
+    </Actions>
+</PageHeader>
+
+@if (!CanAccess)
+{
+    <section class="panel-card access-denied-card">
+        <span><i class="bi bi-shield-lock"></i></span>
+        <h2>دسترسی به گزارش خودروها مجاز نیست</h2>
+        <p>برای مشاهده این گزارش، مجوز گزارش خودروها لازم است.</p>
+    </section>
+}
+else
+{
+    <section class="report-filter panel-card car-report-filter">
+        <div class="form-group">
+            <label>حادثه (اختیاری)</label>
+            <AsyncLookup Value="@selectedAccident" ValueChanged="value => selectedAccident = value"
+                         SearchAsync="SearchAccidentsAsync" Placeholder="برای همه حوادث خالی بگذارید..." />
+        </div>
+        <div class="form-group">
+            <label for="car-report-plate">پلاک (اختیاری)</label>
+            <input id="car-report-plate" value="@plate" @oninput="eventArgs => plate = eventArgs.Value?.ToString() ?? string.Empty"
+                   placeholder="برای همه پلاک‌ها خالی بگذارید..." />
+        </div>
+        <div class="form-group">
+            <label for="car-report-search">جست‌وجوی خودرو (اختیاری)</label>
+            <input id="car-report-search" value="@searchTerm" @oninput="eventArgs => searchTerm = eventArgs.Value?.ToString() ?? string.Empty"
+                   placeholder="نام یا مشخصات خودرو..." />
+        </div>
+        <div class="form-group">
+            <label for="car-report-class">کلاس خودرو (اختیاری)</label>
+            <select id="car-report-class" value="@selectedClass" @onchange="eventArgs => selectedClass = eventArgs.Value?.ToString() ?? string.Empty">
+                <option value="">همه کلاس‌ها</option>
+                @foreach (var value in Enum.GetValues<CarClassEnums>())
+                {
+                    <option value="@Convert.ToByte(value)">@RmsUi.CarClass(value)</option>
+                }
+            </select>
+        </div>
+        <div class="report-filter-actions">
+            <button class="btn btn-primary app-button" type="button" @onclick="SearchAsync" disabled="@isLoading">
+                <i class="bi bi-search"></i> دریافت گزارش
+            </button>
+            <button class="btn btn-light app-button" type="button" @onclick="ClearFilters" disabled="@isLoading">
+                <i class="bi bi-eraser"></i> پاک‌کردن
+            </button>
+        </div>
+    </section>
+
+    @if (!string.IsNullOrWhiteSpace(pageError))
+    {
+        <div class="app-alert danger"><i class="bi bi-exclamation-circle"></i><span>@pageError</span></div>
+    }
+
+    @if (!hasSearched)
+    {
+        <section class="panel-card report-empty-state">
+            <i class="bi bi-car-front"></i>
+            <h2>گزارش هنوز اجرا نشده است</h2>
+            <p>فیلترها اختیاری هستند. برای دریافت فهرست کامل خودروها، حادثه و پلاک را خالی بگذارید و روی «دریافت گزارش» بزنید.</p>
+        </section>
+    }
+    else
+    {
+        <section class="panel-card car-report-panel">
+            <div class="panel-heading">
+                <div>
+                    <h2>خروجی خودروها</h2>
+                    <p>تمام فیلدهای <code>CarListItemResponse</code> در ردیف اصلی و جزئیات زیرمجموعه نمایش داده می‌شود.</p>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                @if (isLoading)
+                {
+                    <div class="table-loading"><span class="spinner-border spinner-border-sm"></span> در حال دریافت گزارش از API...</div>
+                }
+                else if (rows.Count == 0)
+                {
+                    <div class="empty-inline"><i class="bi bi-inbox"></i> خودرویی با فیلترهای انتخاب‌شده پیدا نشد.</div>
+                }
+                else
+                {
+                    <table class="app-table car-report-table">
+                        <thead>
+                            <tr>
+                                <th class="index-cell">ردیف</th>
+                                <th>پلاک</th>
+                                <th>نام خودرو</th>
+                                <th>کلاس</th>
+                                <th>کد حادثه</th>
+                                <th>سال تولید</th>
+                                <th>خسارت</th>
+                                <th>جزئیات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (var index = 0; index < rows.Count; index++)
+                            {
+                                var row = rows[index];
+                                <tr class="car-report-summary-row">
+                                    <td class="index-cell">@Persian((currentPage * PageSize) + index + 1)</td>
+                                    <td><strong>@row.PlateNumber</strong></td>
+                                    <td>@row.CarName</td>
+                                    <td>@RmsUi.CarClass(row.CarClass)</td>
+                                    <td>@row.AccidentCode</td>
+                                    <td>@Persian(row.ProductionYear)</td>
+                                    <td><span class="status-badge @DamageTone(row.DamagePercentage)"><span></span>@Persian(row.DamagePercentage)%</span></td>
+                                    <td><button type="button" class="table-action related" @onclick="() => ToggleDetails(row.Id)" title="نمایش جزئیات"><i class="bi @(expandedRows.Contains(row.Id) ? "bi-chevron-up" : "bi-chevron-down")"></i></button></td>
+                                </tr>
+                                @if (expandedRows.Contains(row.Id))
+                                {
+                                    <tr class="car-report-detail-row">
+                                        <td colspan="8">
+                                            <div class="car-report-detail-grid">
+                                                <div><small>شناسه خودرو</small><strong>@row.Id</strong></div>
+                                                <div><small>شناسه حادثه</small><strong>@row.AccidentId</strong></div>
+                                                <div><small>کد حادثه</small><strong>@row.AccidentCode</strong></div>
+                                                <div><small>شماره پلاک</small><strong>@row.PlateNumber</strong></div>
+                                                <div><small>نام خودرو</small><strong>@row.CarName</strong></div>
+                                                <div><small>کلاس خودرو</small><strong>@RmsUi.CarClass(row.CarClass)</strong></div>
+                                                <div><small>سال تولید</small><strong>@Persian(row.ProductionYear)</strong></div>
+                                                <div><small>درصد خسارت</small><strong>@Persian(row.DamagePercentage)%</strong></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+
+            @if (totalCount > 0)
+            {
+                <div class="panel-pagination">
+                    <span>نمایش @Persian(rows.Count) رکورد از @Persian(totalCount) رکورد</span>
+                    <div class="pagination-buttons">
+                        <button type="button" title="صفحه قبل" disabled="@(currentPage == 0 || isLoading)" @onclick="PreviousPageAsync"><i class="bi bi-chevron-right"></i></button>
+                        <button type="button" class="active">@Persian(currentPage + 1)</button>
+                        <button type="button" title="صفحه بعد" disabled="@(currentPage >= PageCount - 1 || isLoading)" @onclick="NextPageAsync"><i class="bi bi-chevron-left"></i></button>
+                    </div>
+                </div>
+            }
+        </section>
+    }
+}
+
+@code {
+    private const int PageSize = 25;
+    private readonly List<CarListItemResponse> rows = [];
+    private readonly HashSet<Guid> expandedRows = [];
+    private string selectedAccident = string.Empty;
+    private string plate = string.Empty;
+    private string searchTerm = string.Empty;
+    private string selectedClass = string.Empty;
+    private int currentPage;
+    private int totalCount;
+    private bool isLoading;
+    private bool hasSearched;
+    private string? pageError;
+
+    private bool CanAccess => AuthenticationState.HasPermission(UserSection.Reports, UserAccessOperation.Report)
+        && AuthenticationState.HasPermission(UserSection.Cars, UserAccessOperation.Report);
+    private int PageCount => Math.Max(1, (int)Math.Ceiling(totalCount / (double)PageSize));
+
+    private async Task SearchAsync()
+    {
+        currentPage = 0;
+        hasSearched = true;
+        await LoadPageAsync();
+    }
+
+    private async Task LoadPageAsync()
+    {
+        isLoading = true;
+        pageError = null;
+        expandedRows.Clear();
+        try
+        {
+            var result = await CarApi.GetAllAsync(new CarQueries
+            {
+                AccidentId = Guid.TryParse(selectedAccident, out var accidentId) ? accidentId : null,
+                Plate = string.IsNullOrWhiteSpace(plate) ? null : plate.Trim(),
+                SearchTerm = string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm.Trim(),
+                CarClass = byte.TryParse(selectedClass, out var carClass) ? (CarClassEnums)carClass : null,
+                Skip = currentPage * PageSize,
+                Take = PageSize
+            });
+            rows.Clear();
+            rows.AddRange(result.Items);
+            totalCount = result.TotalCount;
+        }
+        catch (Exception exception) when (exception is ApiClientException or HttpRequestException)
+        {
+            rows.Clear();
+            totalCount = 0;
+            pageError = exception is ApiClientException apiException
+                ? apiException.Message
+                : "ارتباط با RMS.Api برقرار نشد. از اجرای سرویس مطمئن شوید.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task PreviousPageAsync()
+    {
+        if (currentPage == 0)
+            return;
+        currentPage--;
+        await LoadPageAsync();
+    }
+
+    private async Task NextPageAsync()
+    {
+        if (currentPage >= PageCount - 1)
+            return;
+        currentPage++;
+        await LoadPageAsync();
+    }
+
+    private void ClearFilters()
+    {
+        selectedAccident = string.Empty;
+        plate = string.Empty;
+        searchTerm = string.Empty;
+        selectedClass = string.Empty;
+        currentPage = 0;
+        totalCount = 0;
+        rows.Clear();
+        expandedRows.Clear();
+        pageError = null;
+        hasSearched = false;
+    }
+
+    private void ToggleDetails(Guid id)
+    {
+        if (!expandedRows.Add(id))
+            expandedRows.Remove(id);
+    }
+
+    private static string DamageTone(int damage) => damage >= 70 ? "danger" : damage >= 30 ? "warning" : "success";
+    private static string Persian(int value) => value.ToString("N0").TranslateDigits();
+
+    private async Task<IReadOnlyList<LookupOption>> SearchAccidentsAsync(string term, CancellationToken token) =>
+        (await LookupApi.GetAccidentsAsync(new AccidentLookupQuery { SearchTerm = term, Take = 20 }, token))
+            .Select(accident => new LookupOption(accident.Id.ToString(), $"{accident.RoadName} · {RmsUi.DateTime(accident.AccidentTimeUnix)}"))
+            .ToArray();
+}

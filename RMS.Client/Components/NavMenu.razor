@@ -36,6 +36,10 @@
     @if (CanAccess(UserSection.Reports))
     {
         <NavLink href="/reports" class="nav-item" @onclick="HandleNavigate"><i class="bi bi-bar-chart-line"></i><span>گزارش‌ها</span></NavLink>
+        @if (HasReportAccess(UserSection.Cars))
+        {
+            <NavLink href="/reports/cars" class="nav-item nav-item-child" @onclick="HandleNavigate"><i class="bi bi-car-front"></i><span>گزارش خودروها</span></NavLink>
+        }
     }
     @if (CanAccess(UserSection.Users))
     {
@@ -58,6 +62,10 @@
         AuthenticationState.HasPermission(section, UserAccessOperation.Create) ||
         AuthenticationState.HasPermission(section, UserAccessOperation.Update) ||
         AuthenticationState.HasPermission(section, UserAccessOperation.Delete);
+
+    private bool HasReportAccess(UserSection section) =>
+        AuthenticationState.HasPermission(UserSection.Reports, UserAccessOperation.Report) &&
+        AuthenticationState.HasPermission(section, UserAccessOperation.Report);
 
     private Task HandleNavigate() => OnNavigate.InvokeAsync();
 

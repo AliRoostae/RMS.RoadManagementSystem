@@ -8,6 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="wwwroot\NewFolder\**" />
+    <Content Remove="wwwroot\NewFolder\**" />
+    <EmbeddedResource Remove="wwwroot\NewFolder\**" />
+    <None Remove="wwwroot\NewFolder\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Blazor_PersianDatePickerZO" Version="3.0.6" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.12" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.12" />
@@ -17,10 +24,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RMS.Shared\RMS.Shared.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="wwwroot\NewFolder\" />
   </ItemGroup>
 
 </Project>
