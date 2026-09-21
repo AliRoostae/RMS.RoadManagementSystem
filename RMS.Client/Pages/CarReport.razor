@@ -6,7 +6,7 @@
 
 <PageTitle>گزارش خودروها | راه‌بان کیان</PageTitle>
 
-<PageHeader Title="گزارش خودروها" Eyebrow="گزارشات" Description="گزارش فقط‌خواندنی خودروها بر اساس فیلترهای انتخاب‌شده">
+<PageHeader Title="گزارش خودروها" Eyebrow="گزارشات" Description="گزارش  خودروها بر اساس فیلترهای انتخاب‌شده">
     <Actions>
         <a class="btn btn-light app-button" href="/reports"><i class="bi bi-arrow-right"></i> بازگشت به گزارشات</a>
         @if (hasSearched && rows.Count > 0)
@@ -81,14 +81,14 @@ else
             <div class="panel-heading">
                 <div>
                     <h2>خروجی خودروها</h2>
-                    <p>تمام فیلدهای <code>CarListItemResponse</code> در ردیف اصلی و جزئیات زیرمجموعه نمایش داده می‌شود.</p>
+               
                 </div>
             </div>
 
             <div class="table-responsive">
                 @if (isLoading)
                 {
-                    <div class="table-loading"><span class="spinner-border spinner-border-sm"></span> در حال دریافت گزارش از API...</div>
+                    <div class="table-loading"><span class="spinner-border spinner-border-sm"></span> در حال دریافت گزارش از ...</div>
                 }
                 else if (rows.Count == 0)
                 {
@@ -128,14 +128,13 @@ else
                                     <tr class="car-report-detail-row">
                                         <td colspan="8">
                                             <div class="car-report-detail-grid">
-                                                <div><small>شناسه خودرو</small><strong>@row.Id</strong></div>
-                                                <div><small>شناسه حادثه</small><strong>@row.AccidentId</strong></div>
+                                              
                                                 <div><small>کد حادثه</small><strong>@row.AccidentCode</strong></div>
                                                 <div><small>شماره پلاک</small><strong>@row.PlateNumber</strong></div>
                                                 <div><small>نام خودرو</small><strong>@row.CarName</strong></div>
                                                 <div><small>کلاس خودرو</small><strong>@RmsUi.CarClass(row.CarClass)</strong></div>
-                                                <div><small>سال تولید</small><strong>@Persian(row.ProductionYear)</strong></div>
-                                                <div><small>درصد خسارت</small><strong>@Persian(row.DamagePercentage)%</strong></div>
+                                                <div><small>سال تولید</small><strong>@row.ProductionYear</strong></div>
+                                                <div><small>درصد خسارت</small><strong>@row.DamagePercentage%</strong></div>
                                             </div>
                                         </td>
                                     </tr>
