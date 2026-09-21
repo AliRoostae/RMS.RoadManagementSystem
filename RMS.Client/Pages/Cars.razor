@@ -33,40 +33,55 @@
 }
 else
 {
-    @if (ParentAccident is not null)
+    @if (!AccidentId.HasValue)
     {
-        <section class="entity-context-card">
-            <span class="entity-context-icon"><i class="bi bi-exclamation-octagon"></i></span>
-            <div>
-                <small>حادثه انتخاب‌شده</small>
-                <strong>ACC-@RmsUi.ShortId(ParentAccident.Id)</strong>
-                <span>@RmsUi.DateTime(ParentAccident.AccidentTimeUnix) · @RmsUi.AccidentType(ParentAccident.AccidentType)</span>
-            </div>
-            @if (CanListPeople)
+        <section class="panel-card access-denied-card image-route-guide">
+            <span><i class="bi bi-car-front"></i></span>
+            <h2>ابتدا حادثه را انتخاب کنید</h2>
+            <p>خودروها به حادثه وابسته‌اند. برای مشاهده یا ثبت خودرو، از فهرست حوادث وارد خودروهای همان حادثه شوید.</p>
+            @if (CanListAccidents)
             {
-                <a class="btn btn-light app-button" href="@($"/accidents/{ParentAccident.Id}/people")"><i class="bi bi-person-walking"></i> افراد حادثه</a>
+                <a class="btn btn-primary app-button" href="/accidents"><i class="bi bi-exclamation-octagon"></i> مشاهده حوادث</a>
             }
         </section>
     }
+    else
+    {
+        @if (ParentAccident is not null)
+        {
+            <section class="entity-context-card">
+                <span class="entity-context-icon"><i class="bi bi-exclamation-octagon"></i></span>
+                <div>
+                    <small>حادثه انتخاب‌شده</small>
+                    <strong>ACC-@RmsUi.ShortId(ParentAccident.Id)</strong>
+                    <span>@RmsUi.DateTime(ParentAccident.AccidentTimeUnix) · @RmsUi.AccidentType(ParentAccident.AccidentType)</span>
+                </div>
+                @if (CanListPeople)
+                {
+                    <a class="btn btn-light app-button" href="@($"/accidents/{ParentAccident.Id}/people")"><i class="bi bi-person-walking"></i> افراد حادثه</a>
+                }
+            </section>
+        }
 
-    <EntityListPanel @key="AccidentId" @ref="listPanel" Columns="Columns" Rows="rows" IsLoading="isLoading"
-                     TotalCount="totalCount" ErrorMessage="@pageError" SuccessMessage="@successMessage"
-                     SearchPlaceholder="جست‌وجو با پلاک، مدل یا کلاس خودرو..." QueryChanged="LoadPageAsync">
-        <RowActions Context="row">
-            @if (CanListPassengers)
-            {
-                <a class="table-action related" href="@($"/cars/{row.Id}/passengers")" title="راننده و سرنشینان خودرو"><i class="bi bi-people"></i></a>
-            }
-            @if (CanUpdate)
-            {
-                <button type="button" class="table-action" title="ویرایش خودرو" @onclick="() => OpenEditAsync(row)"><i class="bi bi-pencil-square"></i></button>
-            }
-            @if (CanDelete)
-            {
-                <button type="button" class="table-action danger" title="حذف خودرو" @onclick="() => AskDelete(row)"><i class="bi bi-trash3"></i></button>
-            }
-        </RowActions>
-    </EntityListPanel>
+        <EntityListPanel @key="AccidentId" @ref="listPanel" Columns="Columns" Rows="rows" IsLoading="isLoading"
+                         TotalCount="totalCount" ErrorMessage="@pageError" SuccessMessage="@successMessage"
+                         SearchPlaceholder="جست‌وجو با پلاک، مدل یا کلاس خودرو..." QueryChanged="LoadPageAsync">
+            <RowActions Context="row">
+                @if (CanListPassengers)
+                {
+                    <a class="table-action related" href="@($"/cars/{row.Id}/passengers")" title="راننده و سرنشینان خودرو"><i class="bi bi-people"></i></a>
+                }
+                @if (CanUpdate)
+                {
+                    <button type="button" class="table-action" title="ویرایش خودرو" @onclick="() => OpenEditAsync(row)"><i class="bi bi-pencil-square"></i></button>
+                }
+                @if (CanDelete)
+                {
+                    <button type="button" class="table-action danger" title="حذف خودرو" @onclick="() => AskDelete(row)"><i class="bi bi-trash3"></i></button>
+                }
+            </RowActions>
+        </EntityListPanel>
+    }
 }
 
 <AppModal IsOpen="modalOpen" Large="true" Title="@(editingRow is null ? "افزودن خودرو" : "ویرایش خودرو")"
@@ -185,12 +200,6 @@ else
 @code {
     [Parameter] public Guid? AccidentId { get; set; }
 
-    private static readonly EntityColumn[] allColumns =
-    [
-        new("Plate", "شماره پلاک"), new("Car", "خودرو"), new("Class", "کلاس"),
-        new("Accident", "حادثه مرتبط"), new("Year", "سال تولید"), new("Damage", "خسارت")
-    ];
-
     private static readonly EntityColumn[] scopedColumns =
     [
         new("Plate", "شماره پلاک"), new("Car", "خودرو"), new("Class", "کلاس"),
@@ -216,7 +225,7 @@ else
     private DateTime licenseDatePicker = DateTime.Today;
     private DatePickerZO? licenseDatePickerComponent;
 
-    private IReadOnlyList<EntityColumn> Columns => AccidentId.HasValue ? scopedColumns : allColumns;
+    private IReadOnlyList<EntityColumn> Columns => scopedColumns;
     private string PageTitleText => AccidentId.HasValue ? $"خودروهای حادثه ACC-{RmsUi.ShortId(AccidentId.Value)}" : "مدیریت خودروها";
     private string PageDescription => AccidentId.HasValue
         ? "ثبت و مدیریت خودروهای همین حادثه؛ شناسه حادثه به‌صورت خودکار اعمال می‌شود."
@@ -228,6 +237,7 @@ else
     private bool CanUpdate => AuthenticationState.HasPermission(UserSection.Cars, UserAccessOperation.View)
         && AuthenticationState.HasPermission(UserSection.Cars, UserAccessOperation.Update);
     private bool CanDelete => AuthenticationState.HasPermission(UserSection.Cars, UserAccessOperation.Delete);
+    private bool CanListAccidents => AuthenticationState.HasPermission(UserSection.Accidents, UserAccessOperation.Report);
     private bool CanListPassengers => AuthenticationState.HasPermission(UserSection.Passengers, UserAccessOperation.Report);
     private bool CanListPeople => AuthenticationState.HasPermission(UserSection.People, UserAccessOperation.Report);
 
@@ -255,6 +265,13 @@ else
                 totalCount = 0;
                 return;
             }
+        }
+        else
+        {
+            rows.Clear();
+            totalCount = 0;
+            isLoading = false;
+            return;
         }
 
         await LoadAsync();
@@ -302,9 +319,16 @@ else
 
     private async Task LoadPageCoreAsync(EntityPageRequest request)
     {
+        if (!AccidentId.HasValue)
+        {
+            rows.Clear();
+            totalCount = 0;
+            return;
+        }
+
         var result = await CarApi.GetAllAsync(new CarQueries
         {
-            AccidentId = AccidentId,
+            AccidentId = AccidentId.Value,
             Skip = request.Skip,
             Take = request.Take,
             SearchTerm = request.SearchTerm
