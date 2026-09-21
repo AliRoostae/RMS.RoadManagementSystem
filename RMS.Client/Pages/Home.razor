@@ -1,0 +1,199 @@
+@page "/"
+@attribute [Authorize]
+@inject IJSRuntime JS
+@inject AnalyticsApiService AnalyticsApi
+@inject RmsAuthenticationStateProvider AuthenticationState
+@implements IAsyncDisposable
+
+<PageTitle>داشبورد | راه‌بان کیان</PageTitle>
+
+<PageHeader Title="داشبورد مدیریت راه‌ها" Description="نمای تجمیعی و بهینه داده‌های مدیریتی از RMS.Api">
+    <Actions>
+        <div class="date-chip"><i class="bi bi-calendar3"></i> @TodayLabel</div>
+        @if (AuthenticationState.HasPermission(UserSection.Accidents, UserAccessOperation.Create))
+        {
+            <a class="btn btn-primary app-button" href="/accidents"><i class="bi bi-plus-lg"></i> ثبت حادثه جدید</a>
+        }
+    </Actions>
+</PageHeader>
+
+@if (!string.IsNullOrWhiteSpace(pageError))
+{
+    <div class="app-alert danger"><i class="bi bi-exclamation-circle"></i><span>@pageError</span></div>
+}
+
+@if (!CanAccess)
+{
+    <section class="panel-card access-denied-card"><span><i class="bi bi-shield-lock"></i></span><h2>دسترسی به داشبورد مدیریتی مجاز نیست</h2><p>برای مشاهده شاخص‌های تجمیعی، مجوز گزارش در بخش گزارش‌ها لازم است.</p></section>
+}
+else if (isLoading)
+{
+    <section class="panel-card table-loading dashboard-loading"><span class="spinner-border spinner-border-sm"></span> در حال دریافت داده‌های داشبورد از API...</section>
+}
+else
+{
+    <section class="stats-grid">
+        <StatCard Label="حوادث بازه" Value="@Persian(dashboard?.AccidentCount ?? 0)" Icon="bi-exclamation-diamond" Tone="danger" Hint="خروجی تجمیعی API" />
+        <StatCard Label="راه‌های ثبت‌شده" Value="@Persian(dashboard?.RoadCount ?? 0)" Icon="bi-signpost-split" Tone="primary" Hint="خروجی تجمیعی API" />
+        <StatCard Label="افراد درگیر" Value="@Persian(dashboard?.PeopleCount ?? 0)" Icon="bi-people" Tone="warning" />
+        <StatCard Label="میانگین شدت آسیب" Value="@($"{Persian(dashboard?.AverageInjury ?? 0)}٪")" Icon="bi-speedometer2" Tone="success" />
+    </section>
+
+    <section class="dashboard-grid">
+        <article class="panel-card chart-panel chart-wide">
+            <div class="panel-heading"><div><h2>روند حوادث</h2><p>تعداد حوادث واقعی در ۱۲ ماه اخیر</p></div></div>
+            <div class="chart-wrap"><canvas id="accidentTrendChart"></canvas></div>
+        </article>
+
+        <article class="panel-card chart-panel">
+            <div class="panel-heading"><div><h2>علل اصلی حوادث</h2><p>بر پایه داده‌های دریافت‌شده از API</p></div></div>
+            <div class="chart-wrap doughnut-wrap"><canvas id="causeChart"></canvas></div>
+            @if ((dashboard?.AccidentCount ?? 0) == 0)
+            {
+                <div class="empty-chart-note">داده‌ای برای نمودار وجود ندارد.</div>
+            }
+        </article>
+    </section>
+
+    <section class="dashboard-grid bottom-grid">
+        <article class="panel-card recent-panel">
+            <div class="panel-heading"><div><h2>آخرین حوادث ثبت‌شده</h2><p>آخرین رکوردهای خلاصه‌شده توسط API</p></div><a href="/accidents" class="text-link">مشاهده همه <i class="bi bi-arrow-left"></i></a></div>
+            @if (RecentAccidents.Count == 0)
+            {
+                <div class="empty-inline"><i class="bi bi-inbox"></i> حادثه‌ای ثبت نشده است.</div>
+            }
+            else
+            {
+                <div class="recent-list">
+                    @foreach (var item in RecentAccidents)
+                    {
+                        <div class="recent-item">
+                            <span class="recent-icon @item.Tone"><i class="bi bi-car-front-fill"></i></span>
+                            <div class="recent-copy"><strong>@item.Title</strong><span><i class="bi bi-geo-alt"></i> @item.Location</span></div>
+                            <div class="recent-meta"><strong>@item.Time</strong><span>@item.Date</span></div>
+                            <span class="severity-badge @item.Tone">@item.Severity</span>
+                        </div>
+                    }
+                </div>
+            }
+        </article>
+
+        <article class="panel-card condition-panel">
+            <div class="panel-heading"><div><h2>وضعیت سطح راه</h2><p>در رکوردهای قابل مشاهده</p></div></div>
+            @if (RoadConditions.Count == 0)
+            {
+                <div class="empty-inline"><i class="bi bi-inbox"></i> داده‌ای وجود ندارد.</div>
+            }
+            else
+            {
+                @foreach (var condition in RoadConditions)
+                {
+                    <div class="condition-row"><div><span class="condition-dot @condition.Tone"></span><strong>@condition.Name</strong><span>@Persian(condition.Count) حادثه</span></div><strong>@Persian(condition.Percent)٪</strong></div>
+                    <div class="progress-track"><span class="@condition.Tone" style="width:@($"{condition.Percent}%")"></span></div>
+                }
+            }
+        </article>
+    </section>
+}
+
+@code {
+    private DashboardOverviewResponse? dashboard;
+    private bool isLoading = true;
+    private bool chartsPending;
+    private bool chartsRendered;
+    private string? pageError;
+
+    private string TodayLabel => DateTime.Now.ToString("yyyy/MM/dd").TranslateDigits();
+    private bool CanAccess => AuthenticationState.HasPermission(UserSection.Reports, UserAccessOperation.Report);
+    private List<RecentAccidentItem> RecentAccidents => (dashboard?.RecentAccidents ?? [])
+        .Select(item =>
+        {
+            var local = DateTimeOffset.FromUnixTimeSeconds(item.AccidentTimeUnix).ToLocalTime();
+            var tone = RmsUi.InjuryTone(item.InjuryPercentage);
+            return new RecentAccidentItem(
+                $"{RmsUi.AccidentType(item.AccidentType)} · ACC-{RmsUi.ShortId(item.Id)}",
+                item.RoadName,
+                local.ToString("HH:mm").TranslateDigits(), local.ToString("yyyy/MM/dd").TranslateDigits(),
+                item.InjuryPercentage >= 70 ? "شدید" : item.InjuryPercentage >= 30 ? "متوسط" : "کم", tone);
+        }).ToList();
+
+    private List<ConditionItem> RoadConditions
+    {
+        get
+        {
+            var conditions = dashboard?.RoadConditions ?? [];
+            var accidentCount = dashboard?.AccidentCount ?? 0;
+            if (accidentCount == 0)
+                return [];
+            var tones = new[] { "primary", "cyan", "warning", "danger" };
+            return conditions.Select((item, index) => new ConditionItem(
+                    RmsUi.RoadCondition((RoadConditionEnums)item.Key), item.Count,
+                    (int)Math.Round(item.Count * 100d / accidentCount), tones[index % tones.Length]))
+                .ToList();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!CanAccess)
+        {
+            isLoading = false;
+            return;
+        }
+
+        try
+        {
+            var endTime = DateTimeOffset.UtcNow.AddSeconds(1);
+            dashboard = await AnalyticsApi.GetDashboardAsync(new DashboardQuery
+            {
+                StartTime = endTime.AddMonths(-12).ToUnixTimeSeconds(),
+                EndTime = endTime.ToUnixTimeSeconds(),
+                Months = 12,
+                RecentCount = 4
+            });
+            chartsPending = true;
+        }
+        catch (Exception exception) when (exception is ApiClientException or HttpRequestException)
+        {
+            pageError = exception is ApiClientException apiException
+                ? apiException.Message
+                : "ارتباط با RMS.Api برقرار نشد. از اجرا بودن سرویس مطمئن شوید.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!chartsPending)
+            return;
+        chartsPending = false;
+        await JS.InvokeVoidAsync("rmsInterop.renderDashboardCharts", BuildChartData());
+        chartsRendered = true;
+    }
+
+    private DashboardChartData BuildChartData()
+    {
+        var trends = dashboard?.MonthlyTrend ?? [];
+        var causes = dashboard?.Causes.Take(6).ToArray() ?? [];
+        return new DashboardChartData(
+            trends.Select(item => DateTimeOffset.FromUnixTimeSeconds(item.PeriodStartUnix).ToLocalTime().ToString("yyyy/MM").TranslateDigits()).ToArray(),
+            trends.Select(item => item.AccidentCount).ToArray(),
+            causes.Select(item => RmsUi.AccidentCause((AccidentCauseEnums)item.Key)).ToArray(),
+            causes.Select(item => item.Count).ToArray());
+    }
+
+    private static string Persian(int value) => value.ToString("N0").TranslateDigits();
+
+    public async ValueTask DisposeAsync()
+    {
+        if (chartsRendered)
+            await JS.InvokeVoidAsync("rmsInterop.destroyCharts");
+    }
+
+    private sealed record RecentAccidentItem(string Title, string Location, string Time, string Date, string Severity, string Tone);
+    private sealed record ConditionItem(string Name, int Count, int Percent, string Tone);
+    private sealed record DashboardChartData(string[] TrendLabels, int[] TrendValues, string[] CauseLabels, int[] CauseValues);
+}

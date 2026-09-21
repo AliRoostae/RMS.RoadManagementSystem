@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="README.md" />
+  </Folder>
+  <Project Path="RMS.Api/RMS.Api.csproj" />
+  <Project Path="RMS.Application/RMS.Application.csproj" />
+  <Project Path="RMS.Client/RMS.Client.csproj" />
+  <Project Path="RMS.Domain/RMS.Domain.csproj" />
+  <Project Path="RMS.Infrastructure/RMS.Infrastructure.csproj" />
+  <Project Path="RMS.Shared/RMS.Shared.csproj" />
+</Solution>

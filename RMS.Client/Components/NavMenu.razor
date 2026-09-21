@@ -1,0 +1,69 @@
+@inject RmsAuthenticationStateProvider AuthenticationState
+
+<nav class="sidebar-nav" aria-label="منوی اصلی">
+    <div class="nav-section-label">منوی اصلی</div>
+    <NavLink href="/" Match="NavLinkMatch.All" class="nav-item" @onclick="HandleNavigate">
+        <i class="bi bi-grid-1x2-fill"></i><span>داشبورد</span>
+    </NavLink>
+    @if (CanAccess(UserSection.Accidents))
+    {
+        <NavLink href="/accidents" class="nav-item" @onclick="HandleNavigate"><i class="bi bi-exclamation-octagon"></i><span>حوادث</span></NavLink>
+    }
+    @if (CanAccess(UserSection.Roads))
+    {
+        <NavLink href="/roads" class="nav-item" @onclick="HandleNavigate"><i class="bi bi-map"></i><span>راه‌ها و محدوده‌ها</span></NavLink>
+    }
+
+    <div class="nav-section-label">اطلاعات وابسته</div>
+    @if (CanAccess(UserSection.Cars))
+    {
+        <NavLink href="/cars" class="nav-item" @onclick="HandleNavigate"><i class="bi bi-car-front"></i><span>خودروها</span></NavLink>
+    }
+    @if (CanAccess(UserSection.Passengers))
+    {
+        <NavLink href="/passengers" class="nav-item" @onclick="HandleNavigate"><i class="bi bi-people"></i><span>رانندگان و سرنشینان</span></NavLink>
+    }
+    @if (CanAccess(UserSection.People))
+    {
+        <NavLink href="/people" class="nav-item" @onclick="HandleNavigate"><i class="bi bi-person-walking"></i><span>عابر</span></NavLink>
+    }
+    @if (CanAccess(UserSection.Images))
+    {
+        <NavLink href="/images" class="nav-item" @onclick="HandleNavigate"><i class="bi bi-images"></i><span>تصاویر حوادث</span></NavLink>
+    }
+
+    <div class="nav-section-label">مدیریت و تحلیل</div>
+    @if (CanAccess(UserSection.Reports))
+    {
+        <NavLink href="/reports" class="nav-item" @onclick="HandleNavigate"><i class="bi bi-bar-chart-line"></i><span>گزارش‌ها</span></NavLink>
+    }
+    @if (CanAccess(UserSection.Users))
+    {
+        <NavLink href="/users" class="nav-item" @onclick="HandleNavigate"><i class="bi bi-person-gear"></i><span>کاربران و دسترسی</span></NavLink>
+    }
+
+    <div class="nav-section-label">حساب کاربری</div>
+    <button type="button" class="nav-item nav-item-button nav-item-danger" @onclick="HandleLogout">
+        <i class="bi bi-box-arrow-right"></i><span>خروج از سامانه</span>
+    </button>
+</nav>
+
+@code {
+    [Parameter] public EventCallback OnNavigate { get; set; }
+    [Parameter] public EventCallback OnLogout { get; set; }
+
+    private bool CanAccess(UserSection section) =>
+        AuthenticationState.HasPermission(section, UserAccessOperation.View) ||
+        AuthenticationState.HasPermission(section, UserAccessOperation.Report) ||
+        AuthenticationState.HasPermission(section, UserAccessOperation.Create) ||
+        AuthenticationState.HasPermission(section, UserAccessOperation.Update) ||
+        AuthenticationState.HasPermission(section, UserAccessOperation.Delete);
+
+    private Task HandleNavigate() => OnNavigate.InvokeAsync();
+
+    private async Task HandleLogout()
+    {
+        await OnNavigate.InvokeAsync();
+        await OnLogout.InvokeAsync();
+    }
+}

@@ -1,0 +1,24 @@
+@RMS.Api_HostAddress = http://localhost:5237
+@AccessToken = paste-access-token-here
+
+GET {{RMS.Api_HostAddress}}/health
+
+###
+
+POST {{RMS.Api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "mobileNumber": "09121234567",
+  "password": "123456"
+}
+
+###
+
+GET {{RMS.Api_HostAddress}}/api/auth/me
+Authorization: Bearer {{AccessToken}}
+
+###
+
+GET {{RMS.Api_HostAddress}}/api/roads?skip=0&take=20
+Authorization: Bearer {{AccessToken}}

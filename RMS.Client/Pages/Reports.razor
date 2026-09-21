@@ -1,0 +1,199 @@
+@page "/reports"
+@attribute [Authorize]
+@using System.Globalization
+@inject IJSRuntime JS
+@inject AnalyticsApiService AnalyticsApi
+@inject LookupApiService LookupApi
+@inject RmsAuthenticationStateProvider AuthenticationState
+@implements IAsyncDisposable
+
+<PageTitle>گزارش‌ها | راه‌بان کیان</PageTitle>
+
+<PageHeader Title="گزارش‌ها و تحلیل داده" Eyebrow="هوش مدیریتی" Description="تحلیل تجمیعی سمت سرور با پاسخ سبک و بهینه">
+    <Actions>
+        <button class="btn btn-light app-button" disabled title="API خروجی گزارش هنوز پیاده‌سازی نشده است"><i class="bi bi-download"></i> دریافت گزارش</button>
+        <button class="btn btn-primary app-button" @onclick="ApplyFiltersAsync" disabled="@isLoading"><i class="bi bi-sliders"></i> به‌روزرسانی تحلیل</button>
+    </Actions>
+</PageHeader>
+
+@if (!CanAccess)
+{
+    <section class="panel-card access-denied-card"><span><i class="bi bi-shield-lock"></i></span><h2>دسترسی به گزارش‌ها مجاز نیست</h2><p>برای مشاهده این صفحه مجوز گزارش در بخش گزارش‌ها لازم است.</p></section>
+}
+else
+{
+    @if (!string.IsNullOrWhiteSpace(pageError))
+    {
+        <div class="app-alert danger"><i class="bi bi-exclamation-circle"></i><span>@pageError</span></div>
+    }
+
+    <section class="report-filter panel-card">
+        <div class="form-group"><label>بازه زمانی</label><select @bind="rangeMonths"><option value="12">۱۲ ماه اخیر</option><option value="6">۶ ماه اخیر</option><option value="1">ماه جاری</option></select></div>
+        <div class="form-group"><label>راه</label><AsyncLookup Value="@selectedRoad" ValueChanged="value => selectedRoad = value"
+            SearchAsync="SearchRoadsAsync" Placeholder="نام راه را تایپ کنید..." Disabled="@(!CanFilterByRoad)" /></div>
+        <div class="form-group"><label>نوع حادثه</label><select @bind="selectedType"><option value="">همه انواع</option>@foreach (var type in Enum.GetValues<AccidentTypeEnums>()) { <option value="@Convert.ToByte(type)">@RmsUi.AccidentType(type)</option> }</select></div>
+        <button class="btn btn-primary app-button" @onclick="ApplyFiltersAsync" disabled="@isLoading"><i class="bi bi-search"></i> اعمال فیلتر</button>
+    </section>
+
+    @if (isLoading)
+    {
+        <section class="panel-card table-loading dashboard-loading"><span class="spinner-border spinner-border-sm"></span> در حال دریافت داده‌های گزارش از API...</section>
+    }
+    else
+    {
+        <section class="stats-grid compact-stats">
+            <StatCard Label="حوادث بازه" Value="@Persian(report?.AccidentCount ?? 0)" Icon="bi-exclamation-diamond" Tone="danger" Hint="خروجی تجمیعی API" />
+            <StatCard Label="افراد درگیر" Value="@Persian(report?.PeopleCount ?? 0)" Icon="bi-bandaid" Tone="warning" />
+            <StatCard Label="خودروهای درگیر" Value="@Persian(report?.CarCount ?? 0)" Icon="bi-car-front" Tone="primary" Hint="محاسبه مستقیم در پایگاه داده" />
+            <StatCard Label="میانگین شدت آسیب" Value="@($"{Persian(report?.AverageInjury ?? 0)}٪")" Icon="bi-shield-exclamation" Tone="cyan" />
+        </section>
+
+        <section class="report-grid">
+            <article class="panel-card chart-panel report-main-chart"><div class="panel-heading"><div><h2>مقایسه تعداد و شدت حوادث</h2><p>داده واقعی در بازه انتخاب‌شده</p></div></div><div class="chart-wrap"><canvas id="reportComboChart"></canvas></div></article>
+            <article class="panel-card chart-panel"><div class="panel-heading"><div><h2>نوع حادثه</h2><p>توزیع الگوی برخورد</p></div></div><div class="chart-wrap doughnut-wrap"><canvas id="reportTypeChart"></canvas></div></article>
+            <article class="panel-card chart-panel"><div class="panel-heading"><div><h2>شرایط آب‌وهوایی</h2><p>تعداد حادثه به تفکیک وضعیت جوی</p></div></div><div class="chart-wrap"><canvas id="weatherChart"></canvas></div></article>
+            <article class="panel-card insight-card"><div class="insight-icon"><i class="bi bi-lightbulb"></i></div><h2>بینش داده فعلی</h2><p>@InsightText</p><span class="report-data-note"><i class="bi bi-info-circle"></i> فیلتر و محاسبه شاخص‌ها در API و روی کل داده‌های بازه انجام شده است.</span></article>
+        </section>
+    }
+}
+
+@code {
+    private AccidentReportResponse? report;
+    private int rangeMonths = 12;
+    private string selectedRoad = string.Empty;
+    private string selectedType = string.Empty;
+    private bool isLoading = true;
+    private bool chartsPending;
+    private bool chartsRendered;
+    private string? pageError;
+
+    private bool CanAccess => AuthenticationState.HasPermission(UserSection.Reports, UserAccessOperation.Report);
+    private bool CanFilterByRoad => AuthenticationState.HasPermission(UserSection.Roads, UserAccessOperation.Report);
+
+    private string InsightText
+    {
+        get
+        {
+            if ((report?.AccidentCount ?? 0) == 0)
+                return "در بازه و فیلتر انتخاب‌شده حادثه‌ای وجود ندارد.";
+            var mainCause = report!.Causes.FirstOrDefault();
+            var mainWeather = report.Weather.FirstOrDefault();
+            if (mainCause is null || mainWeather is null)
+                return "اطلاعات این بازه برای استخراج الگوی غالب کافی نیست.";
+            return $"پرتکرارترین علت «{RmsUi.AccidentCause((AccidentCauseEnums)mainCause.Key)}» با {Persian(mainCause.Count)} رخداد است و بیشترین حوادث در وضعیت «{RmsUi.Weather((WeatherConditionEnums)mainWeather.Key)}» ثبت شده‌اند.";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!CanAccess)
+        {
+            isLoading = false;
+            return;
+        }
+
+        try
+        {
+            await LoadReportAsync();
+            chartsPending = true;
+        }
+        catch (Exception exception) when (exception is ApiClientException or HttpRequestException)
+        {
+            pageError = exception is ApiClientException apiException
+                ? apiException.Message
+                : "ارتباط با RMS.Api برقرار نشد. از اجرا بودن سرویس مطمئن شوید.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!chartsPending)
+            return;
+        chartsPending = false;
+        await JS.InvokeVoidAsync("rmsInterop.renderReportCharts", BuildChartData());
+        chartsRendered = true;
+    }
+
+    private async Task ApplyFiltersAsync()
+    {
+        isLoading = true;
+        pageError = null;
+        try
+        {
+            await LoadReportAsync();
+            chartsPending = true;
+        }
+        catch (Exception exception) when (exception is ApiClientException or HttpRequestException)
+        {
+            pageError = exception is ApiClientException apiException
+                ? apiException.Message
+                : "ارتباط با RMS.Api برقرار نشد. از اجرا بودن سرویس مطمئن شوید.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadReportAsync()
+    {
+        var endTime = DateTimeOffset.UtcNow.AddSeconds(1);
+        report = await AnalyticsApi.GetAccidentReportAsync(new AccidentReportQuery
+        {
+            StartTime = endTime.AddMonths(-rangeMonths).ToUnixTimeSeconds(),
+            EndTime = endTime.ToUnixTimeSeconds(),
+            Months = Math.Clamp(rangeMonths, 1, 24),
+            RoadId = Guid.TryParse(selectedRoad, out var roadId) ? roadId : null,
+            AccidentType = byte.TryParse(selectedType, out var type) ? (AccidentTypeEnums)type : null
+        });
+    }
+
+    private async Task<IReadOnlyList<LookupOption>> SearchRoadsAsync(string term, CancellationToken token) =>
+        (await LookupApi.GetRoadsAsync(new LookupQuery { SearchTerm = term, Take = 20 }, token))
+            .Select(road => new LookupOption(road.Id.ToString(), road.Name))
+            .ToArray();
+
+    private ReportChartData BuildChartData()
+    {
+        var monthly = report?.MonthlyTrend ?? [];
+        var types = report?.Types ?? [];
+        var weather = report?.Weather ?? [];
+
+        return new ReportChartData(
+            monthly.Select(item => PersianMonthLabel(item.PeriodStartUnix)).ToArray(),
+            monthly.Select(item => item.AccidentCount).ToArray(),
+            monthly.Select(item => item.AverageInjury).ToArray(),
+            types.Select(item => RmsUi.AccidentType((AccidentTypeEnums)item.Key)).ToArray(),
+            types.Select(item => item.Count).ToArray(),
+            weather.Select(item => RmsUi.Weather((WeatherConditionEnums)item.Key)).ToArray(),
+            weather.Select(item => item.Count).ToArray());
+    }
+
+    private static string Persian(int value) => value.ToString("N0").TranslateDigits();
+
+    private static string PersianMonthLabel(long unixTime)
+    {
+        var date = DateTimeOffset.FromUnixTimeSeconds(unixTime).ToLocalTime().DateTime;
+        var calendar = new PersianCalendar();
+        return $"{calendar.GetYear(date):0000}/{calendar.GetMonth(date):00}".TranslateDigits();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (chartsRendered)
+            await JS.InvokeVoidAsync("rmsInterop.destroyCharts");
+    }
+
+    private sealed record ReportChartData(
+        string[] MonthLabels,
+        int[] AccidentCounts,
+        int[] AverageInjury,
+        string[] TypeLabels,
+        int[] TypeValues,
+        string[] WeatherLabels,
+        int[] WeatherValues);
+}

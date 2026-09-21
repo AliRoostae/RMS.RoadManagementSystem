@@ -1,0 +1,40 @@
+@if (IsOpen)
+{
+    <div class="modal-layer" role="presentation" @onkeydown="HandleKeyDown" tabindex="-1">
+        <button type="button" class="modal-backdrop-custom" @onclick="RequestClose" aria-label="بستن"></button>
+        <section class="app-modal @(Large ? "modal-large" : null)" role="dialog" aria-modal="true" aria-labelledby="app-modal-title">
+            <header class="app-modal-header">
+                <div>
+                    <div class="modal-icon"><i class="bi @Icon"></i></div>
+                    <div>
+                        <h2 id="app-modal-title">@Title</h2>
+                        @if (!string.IsNullOrWhiteSpace(Subtitle))
+                        {
+                            <p>@Subtitle</p>
+                        }
+                    </div>
+                </div>
+                <button type="button" class="icon-button" @onclick="RequestClose" aria-label="بستن پنجره"><i class="bi bi-x-lg"></i></button>
+            </header>
+            <div class="app-modal-body">@ChildContent</div>
+            @if (Footer is not null)
+            {
+                <footer class="app-modal-footer">@Footer</footer>
+            }
+        </section>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public bool Large { get; set; }
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public string Icon { get; set; } = "bi-plus-lg";
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? Footer { get; set; }
+
+    private Task RequestClose() => OnClose.InvokeAsync();
+    private Task HandleKeyDown(KeyboardEventArgs args) => args.Key == "Escape" ? RequestClose() : Task.CompletedTask;
+}

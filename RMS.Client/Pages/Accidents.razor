@@ -1,0 +1,813 @@
+@page "/accidents"
+@attribute [Authorize]
+@using System.Globalization
+@using NetTopologySuite.Geometries
+@inject IJSRuntime JS
+@inject AccidentApiService AccidentApi
+@inject LookupApiService LookupApi
+@inject RoadApiService RoadApi
+@inject RmsAuthenticationStateProvider AuthenticationState
+@implements IAsyncDisposable
+
+<PageTitle>مدیریت حوادث | راه‌بان کیان</PageTitle>
+
+<PageHeader Title="مدیریت حوادث" Description="ثبت، جست‌وجو و بررسی حوادث جاده‌ای با دسترسی مستقیم به اطلاعات وابسته" Eyebrow="عملیات و پایش">
+    <Actions>
+        @if (CanCreate)
+        {
+            <button class="btn btn-primary app-button" type="button" @onclick="OpenCreateAsync">
+                <i class="bi bi-plus-lg"></i> افزودن حادثه
+            </button>
+        }
+    </Actions>
+</PageHeader>
+
+@if (!CanList)
+{
+    <section class="panel-card access-denied-card">
+        <span><i class="bi bi-shield-lock"></i></span>
+        <h2>دسترسی به این بخش مجاز نیست</h2>
+        <p>برای مشاهده فهرست حوادث باید مجوز گزارش این بخش را داشته باشید.</p>
+    </section>
+}
+else
+{
+    <EntityListPanel @ref="listPanel" Columns="columns" Rows="rows" IsLoading="isLoading"
+                     TotalCount="totalCount" ErrorMessage="@pageError" SuccessMessage="@successMessage"
+                     SearchPlaceholder="جست‌وجو با نام راه یا شناسه کامل حادثه..." QueryChanged="LoadPageAsync">
+        <RowActions Context="row">
+            @if (CanListCars)
+            {
+                <a class="table-action related" href="@($"/accidents/{row.Id}/cars")" title="خودروهای حادثه"><i class="bi bi-car-front"></i></a>
+            }
+            @if (CanListPeople)
+            {
+                <a class="table-action related" href="@($"/accidents/{row.Id}/people")" title="عابران و افراد حادثه"><i class="bi bi-person-walking"></i></a>
+            }
+            @if (CanListImages)
+            {
+                <a class="table-action related" href="@($"/accidents/{row.Id}/images")" title="تصاویر حادثه"><i class="bi bi-images"></i></a>
+            }
+            @if (CanUpdate)
+            {
+                <button type="button" class="table-action" title="ویرایش حادثه" @onclick="() => OpenEditAsync(row)"><i class="bi bi-pencil-square"></i></button>
+            }
+            @if (CanDelete)
+            {
+                <button type="button" class="table-action danger" title="حذف حادثه" @onclick="() => AskDelete(row)"><i class="bi bi-trash3"></i></button>
+            }
+        </RowActions>
+    </EntityListPanel>
+}
+
+<AppModal IsOpen="modalOpen" Large="true" Title="@(editingRow is null ? "افزودن حادثه" : "ویرایش حادثه")"
+          Subtitle="اطلاعات حادثه مستقیماً در RMS.Api ذخیره می‌شود." Icon="bi-exclamation-octagon" OnClose="CloseModalAsync">
+    <ChildContent>
+        @if (isLoadingEditor)
+        {
+            <div class="table-loading"><span class="spinner-border spinner-border-sm"></span> در حال دریافت جزئیات حادثه...</div>
+        }
+        else
+        {
+            @if (!string.IsNullOrWhiteSpace(mutationError))
+            {
+                <div class="app-alert danger"><i class="bi bi-exclamation-circle"></i><span>@mutationError</span></div>
+            }
+            <form id="accident-form" @onsubmit="SaveAsync" @onsubmit:preventDefault="true">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>راه یا محدوده</label>
+                        <AsyncLookup Value="@GetDraft("Road")" ValueChanged="ChangeRoadAsync"
+                                     SearchAsync="SearchRoadsAsync" Placeholder="نام راه را تایپ کنید..." Required="true" />
+                        <small class="field-help">برای مشاهده گزینه‌ها نام راه را جست‌وجو کنید.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="accident-date">زمان وقوع حادثه</label>
+                        <DatePickerZO @ref="accidentDatePickerComponent" PopupDatePickerZO="true" Format="yyyy/MM/dd hh:mm:ss"
+                                      SelectDate="@AccidentDatePicker" SelectDateChanged="OnAccidentDateChanged" />
+                    </div>
+                    <div class="form-group">
+                        <label for="accident-weather">وضعیت آب‌وهوا</label>
+                        <select id="accident-weather" value="@GetDraft("Weather")" required @onchange="ChangeWeather">
+                            <option value="">انتخاب کنید</option>
+                            @foreach (var option in EnumOptions<WeatherConditionEnums>(RmsUi.Weather))
+                            {
+                                <option value="@option.Value">@option.Label</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="accident-road-condition">وضعیت سطح راه</label>
+                        <select id="accident-road-condition" value="@GetDraft("RoadCondition")" required @onchange="ChangeRoadCondition">
+                            <option value="">انتخاب کنید</option>
+                            @foreach (var option in EnumOptions<RoadConditionEnums>(RmsUi.RoadCondition))
+                            {
+                                <option value="@option.Value">@option.Label</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="accident-lighting">وضعیت روشنایی</label>
+                        <select id="accident-lighting" value="@GetDraft("Lighting")" required @onchange="ChangeLighting">
+                            <option value="">انتخاب کنید</option>
+                            @foreach (var option in EnumOptions<LightingConditionEnums>(RmsUi.Lighting))
+                            {
+                                <option value="@option.Value">@option.Label</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="accident-sign">وضعیت علائم ترافیکی</label>
+                        <select id="accident-sign" value="@GetDraft("Sign")" required @onchange="ChangeSign">
+                            <option value="">انتخاب کنید</option>
+                            @foreach (var option in EnumOptions<TrafficSignConditionEnums>(RmsUi.TrafficSign))
+                            {
+                                <option value="@option.Value">@option.Label</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="accident-cause">علت حادثه</label>
+                        <select id="accident-cause" value="@GetDraft("Cause")" required @onchange="ChangeCause">
+                            <option value="">انتخاب کنید</option>
+                            @foreach (var option in EnumOptions<AccidentCauseEnums>(RmsUi.AccidentCause))
+                            {
+                                <option value="@option.Value">@option.Label</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="accident-type">نوع برخورد</label>
+                        <select id="accident-type" value="@GetDraft("Type")" required @onchange="ChangeType">
+                            <option value="">انتخاب کنید</option>
+                            @foreach (var option in EnumOptions<AccidentTypeEnums>(RmsUi.AccidentType))
+                            {
+                                <option value="@option.Value">@option.Label</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+        <section class="accident-location-editor">
+            <div class="accident-location-heading">
+                <div>
+                    <span class="accident-location-icon"><i class="bi bi-geo-alt"></i></span>
+                    <div>
+                        <strong>موقعیت حادثه روی نقشه</strong>
+                        <small>نقطه را روی مسیر انتخاب کنید یا نشانگر را جابه‌جا کنید.</small>
+                    </div>
+                </div>
+                <div class="accident-location-actions">
+                    <button type="button" class="btn btn-light app-button" @onclick="UseCurrentLocationAsync"
+                            disabled="@(selectedAccidentRoadId is null || isLocating)">
+                        @if (isLocating)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span><span>دریافت موقعیت...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-crosshair"></i><span>موقعیت فعلی (GPS)</span>
+                        }
+                    </button>
+                    <button type="button" class="btn btn-light app-button accident-location-clear"
+                            @onclick="ClearAccidentLocationAsync" disabled="@(selectedLatitude is null)">
+                        <i class="bi bi-x-circle"></i><span>پاک کردن نقطه</span>
+                    </button>
+                </div>
+            </div>
+
+            @if (selectedLatitude.HasValue && selectedLongitude.HasValue)
+            {
+                <div class="accident-coordinate-summary">
+                    <span><i class="bi bi-check2-circle"></i> موقعیت انتخاب شد</span>
+                    <code dir="ltr">@CoordinateLabel</code>
+                    @if (gpsAccuracy.HasValue)
+                    {
+                        <small>دقت تقریبی GPS: @gpsAccuracy.Value.ToString("0", CultureInfo.InvariantCulture).TranslateDigits() متر</small>
+                    }
+                </div>
+            }
+            else if (selectedAccidentRoadId is null)
+            {
+                <div class="accident-location-note"><i class="bi bi-info-circle"></i> ابتدا راه مرتبط با حادثه را انتخاب کنید.</div>
+            }
+            else
+            {
+                <div class="accident-location-note"><i class="bi bi-cursor"></i> روی محل حادثه در نقشه کلیک کنید.</div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(locationError))
+            {
+                <div class="app-alert danger accident-location-error"><i class="bi bi-exclamation-circle"></i><span>@locationError</span></div>
+            }
+
+            <div id="accident-location-map" class="accident-location-map"></div>
+            <div class="accident-location-help">
+                <span><i class="bi bi-mouse"></i> کلیک روی نقشه: تعیین نقطه</span>
+                <span><i class="bi bi-arrows-move"></i> جابه‌جایی نشانگر: اصلاح دقیق موقعیت</span>
+                <span><i class="bi bi-shield-check"></i> GPS در HTTPS و پس از تأیید دسترسی دستگاه فعال است.</span>
+            </div>
+        </section>
+            </form>
+        }
+    </ChildContent>
+    <Footer>
+        <button type="button" class="btn btn-light app-button" @onclick="CloseModalAsync" disabled="@isMutating">انصراف</button>
+        @if (!isLoadingEditor)
+        {
+            <button type="submit" form="accident-form" class="btn btn-primary app-button" disabled="@isMutating">
+                @if (isMutating)
+                {
+                    <span class="spinner-border spinner-border-sm"></span><span>در حال ذخیره...</span>
+                }
+                else
+                {
+                    <i class="bi bi-check2-circle"></i><span>ذخیره اطلاعات</span>
+                }
+            </button>
+        }
+    </Footer>
+</AppModal>
+
+<AppModal IsOpen="deleteModalOpen" Title="حذف حادثه" Subtitle="این عملیات در API انجام می‌شود و قابل بازگشت نیست."
+          Icon="bi-trash3" OnClose="CloseDeleteModal">
+    <ChildContent>
+        <div class="delete-confirmation">
+            <span><i class="bi bi-exclamation-triangle"></i></span>
+            <div><strong>از حذف این حادثه مطمئن هستید؟</strong><p>در صورت داشتن خودرو، عابر یا اطلاعات وابسته، API ممکن است حذف را رد کند.</p></div>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(deleteError))
+        {
+            <div class="app-alert danger"><i class="bi bi-exclamation-circle"></i><span>@deleteError</span></div>
+        }
+    </ChildContent>
+    <Footer>
+        <button type="button" class="btn btn-light app-button" @onclick="CloseDeleteModal" disabled="@isMutating">انصراف</button>
+        <button type="button" class="btn btn-danger app-button" @onclick="ConfirmDeleteAsync" disabled="@isMutating">
+            @if (isMutating)
+            {
+                <span class="spinner-border spinner-border-sm"></span><span>در حال حذف...</span>
+            }
+            else
+            {
+                <i class="bi bi-trash3"></i><span>حذف</span>
+            }
+        </button>
+    </Footer>
+</AppModal>
+
+@code {
+    private static readonly EntityColumn[] columns =
+    [
+        new("Code", "شناسه"), new("Road", "راه یا محدوده"), new("Type", "نوع حادثه"),
+        new("Weather", "وضعیت جوی"), new("People", "افراد درگیر"), new("Date", "زمان وقوع")
+    ];
+
+    private readonly List<EntityRow> rows = [];
+    private readonly Dictionary<string, string> draft = new(StringComparer.OrdinalIgnoreCase);
+    private int totalCount;
+    private EntityListPanel? listPanel;
+    private EntityRow? editingRow;
+    private EntityRow? deletingRow;
+    private DotNetObjectReference<Accidents>? accidentMapReference;
+    private bool isLoading = true;
+    private bool modalOpen;
+    private bool deleteModalOpen;
+    private bool isLoadingEditor;
+    private bool isMutating;
+    private bool accidentMapPending;
+    private bool isLocating;
+    private Guid? selectedAccidentRoadId;
+    private double? selectedLatitude;
+    private double? selectedLongitude;
+    private double? gpsAccuracy;
+    private Geometry? selectedRoadGeometry;
+    private string? pageError;
+    private string? locationError;
+    private string? mutationError;
+    private string? deleteError;
+    private string? successMessage;
+    private DateTime accidentDatePicker = DateTime.Now;
+    private DatePickerZO? accidentDatePickerComponent;
+
+    private bool CanList => AuthenticationState.HasPermission(UserSection.Accidents, UserAccessOperation.Report);
+    private bool CanCreate => AuthenticationState.HasPermission(UserSection.Accidents, UserAccessOperation.Create);
+    private bool CanUpdate => AuthenticationState.HasPermission(UserSection.Accidents, UserAccessOperation.View)
+        && AuthenticationState.HasPermission(UserSection.Accidents, UserAccessOperation.Update);
+    private bool CanDelete => AuthenticationState.HasPermission(UserSection.Accidents, UserAccessOperation.Delete);
+    private bool CanListCars => AuthenticationState.HasPermission(UserSection.Cars, UserAccessOperation.Report);
+    private bool CanListPeople => AuthenticationState.HasPermission(UserSection.People, UserAccessOperation.Report);
+    private bool CanListImages => AuthenticationState.HasPermission(UserSection.Images, UserAccessOperation.Report);
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!CanList)
+        {
+            isLoading = false;
+            return;
+        }
+        await LoadAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!accidentMapPending)
+            return;
+
+        accidentMapPending = false;
+        accidentMapReference ??= DotNetObjectReference.Create(this);
+        var rendered = await JS.InvokeAsync<bool>(
+            "rmsInterop.renderAccidentLocationMap",
+            "accident-location-map",
+            BuildSelectedRoadPaths(),
+            selectedLatitude.HasValue && selectedLongitude.HasValue
+                ? new MapPoint(selectedLatitude.Value, selectedLongitude.Value)
+                : null,
+            accidentMapReference);
+        if (!rendered)
+            accidentMapPending = true;
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        pageError = null;
+        try
+        {
+            await LoadPageCoreAsync(new EntityPageRequest(0, 20, string.Empty, CancellationToken.None));
+        }
+        catch (Exception exception) when (exception is ApiClientException or HttpRequestException)
+        {
+            pageError = ErrorMessage(exception, "دریافت حوادث از API با خطا مواجه شد.");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadPageAsync(EntityPageRequest request)
+    {
+        isLoading = true;
+        pageError = null;
+        try
+        {
+            await LoadPageCoreAsync(request);
+        }
+        catch (OperationCanceledException) when (request.CancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception) when (exception is ApiClientException or HttpRequestException)
+        {
+            pageError = ErrorMessage(exception, "دریافت حوادث از API با خطا مواجه شد.");
+        }
+        finally
+        {
+            if (!request.CancellationToken.IsCancellationRequested)
+                isLoading = false;
+        }
+    }
+
+    private async Task LoadPageCoreAsync(EntityPageRequest request)
+    {
+        var result = await AccidentApi.GetAllAsync(new AccidentQuery
+        {
+            StartTime = 946684800,
+            EndTime = 4102444800,
+            Skip = request.Skip,
+            Take = request.Take,
+            SearchTerm = request.SearchTerm,
+            OrderBy = AccidentSortOrder.AccidentTimeDescending
+        }, request.CancellationToken);
+        rows.Clear();
+        rows.AddRange(result.Items.Select(ToRow));
+        totalCount = result.TotalCount;
+    }
+
+    private async Task<IReadOnlyList<LookupOption>> SearchRoadsAsync(string term, CancellationToken token) =>
+        (await LookupApi.GetRoadsAsync(new LookupQuery { SearchTerm = term, Take = 20 }, token))
+            .Select(road => new LookupOption(road.Id.ToString(), road.Name))
+            .ToArray();
+
+    private async Task OpenCreateAsync()
+    {
+        editingRow = null;
+        draft.Clear();
+        AccidentDatePicker = DateTime.Now;
+        mutationError = null;
+        isLoadingEditor = false;
+        modalOpen = true;
+        await PrepareEditorAsync();
+    }
+
+    private async Task OpenEditAsync(EntityRow row)
+    {
+        editingRow = row;
+        draft.Clear();
+        mutationError = null;
+        isLoadingEditor = true;
+        modalOpen = true;
+        try
+        {
+            foreach (var item in ToDraft(await AccidentApi.GetByIdAsync(row.Id)))
+                draft[item.Key] = item.Value;
+            SyncAccidentDatePickerFromDraft();
+            await PrepareEditorAsync();
+        }
+        catch (Exception exception) when (IsExpectedException(exception))
+        {
+            mutationError = ErrorMessage(exception, "دریافت جزئیات حادثه با خطا مواجه شد.");
+        }
+        finally
+        {
+            isLoadingEditor = false;
+        }
+    }
+
+    private async Task PrepareEditorAsync()
+    {
+        selectedAccidentRoadId = ParseRoadId(draft);
+        selectedLatitude = ParseCoordinate(draft, "Latitude");
+        selectedLongitude = ParseCoordinate(draft, "Longitude");
+        gpsAccuracy = null;
+        locationError = null;
+        isLocating = false;
+        await LoadSelectedRoadGeometryAsync();
+        accidentMapPending = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ChangeRoadAsync(string value)
+    {
+        draft["Road"] = value;
+        var roadId = ParseRoadId(draft);
+        if (roadId == selectedAccidentRoadId)
+            return;
+
+        selectedAccidentRoadId = roadId;
+        selectedLatitude = null;
+        selectedLongitude = null;
+        gpsAccuracy = null;
+        locationError = null;
+        isLocating = false;
+        draft["Latitude"] = string.Empty;
+        draft["Longitude"] = string.Empty;
+        await LoadSelectedRoadGeometryAsync();
+        accidentMapPending = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CloseModalAsync()
+    {
+        if (isMutating)
+            return;
+        modalOpen = false;
+        await ResetEditorAsync();
+    }
+
+    private async Task ResetEditorAsync()
+    {
+        accidentMapPending = false;
+        selectedAccidentRoadId = null;
+        selectedLatitude = null;
+        selectedLongitude = null;
+        selectedRoadGeometry = null;
+        gpsAccuracy = null;
+        locationError = null;
+        isLocating = false;
+        await JS.InvokeVoidAsync("rmsInterop.disposeAccidentLocationMap");
+    }
+
+    private async Task SaveAsync()
+    {
+        mutationError = null;
+        isMutating = true;
+        try
+        {
+            if (editingRow is null)
+            {
+                await CreateAsync(draft);
+                successMessage = "حادثه با موفقیت ثبت شد.";
+            }
+            else
+            {
+                await UpdateAsync(editingRow.Id, draft);
+                successMessage = "حادثه با موفقیت ویرایش شد.";
+            }
+
+            modalOpen = false;
+            await ResetEditorAsync();
+            if (listPanel is not null)
+                await listPanel.ReloadAsync();
+            else
+                await LoadAsync();
+        }
+        catch (Exception exception) when (IsExpectedException(exception))
+        {
+            mutationError = ErrorMessage(exception, "ذخیره اطلاعات حادثه با خطا مواجه شد.");
+        }
+        finally
+        {
+            isMutating = false;
+        }
+    }
+
+    private void AskDelete(EntityRow row)
+    {
+        deletingRow = row;
+        deleteError = null;
+        deleteModalOpen = true;
+    }
+
+    private void CloseDeleteModal()
+    {
+        if (!isMutating)
+            deleteModalOpen = false;
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        if (deletingRow is null)
+            return;
+
+        deleteError = null;
+        isMutating = true;
+        try
+        {
+            await DeleteAsync(deletingRow.Id);
+            deleteModalOpen = false;
+            successMessage = "حادثه با موفقیت حذف شد.";
+            if (listPanel is not null)
+                await listPanel.ReloadAsync();
+            else
+                await LoadAsync();
+        }
+        catch (Exception exception) when (IsExpectedException(exception))
+        {
+            deleteError = ErrorMessage(exception, "حذف حادثه با خطا مواجه شد.");
+        }
+        finally
+        {
+            isMutating = false;
+        }
+    }
+
+    private async Task UseCurrentLocationAsync()
+    {
+        locationError = null;
+        isLocating = true;
+        await JS.InvokeVoidAsync("rmsInterop.useCurrentAccidentLocation");
+    }
+
+    private async Task ClearAccidentLocationAsync()
+    {
+        selectedLatitude = null;
+        selectedLongitude = null;
+        gpsAccuracy = null;
+        locationError = null;
+        draft["Latitude"] = string.Empty;
+        draft["Longitude"] = string.Empty;
+        await JS.InvokeVoidAsync("rmsInterop.clearAccidentLocation");
+    }
+
+    [JSInvokable]
+    public async Task OnAccidentLocationChanged(double latitude, double longitude, double? accuracy)
+    {
+        if (!selectedAccidentRoadId.HasValue)
+            return;
+
+        try
+        {
+            var nearest = await RoadApi.GetNearestPointAsync(
+                selectedAccidentRoadId.Value,
+                latitude,
+                longitude);
+            if (!nearest.IsWithinTolerance)
+            {
+                isLocating = false;
+                locationError = $"نقطه انتخاب‌شده {nearest.DistanceMeters.ToString("0", CultureInfo.InvariantCulture).TranslateDigits()} متر از مسیر فاصله دارد. نقطه‌ای نزدیک‌تر از ۱۰۰ متر انتخاب کنید.";
+                await JS.InvokeVoidAsync("rmsInterop.clearAccidentLocation");
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
+            latitude = nearest.NearestLatitude;
+            longitude = nearest.NearestLongitude;
+            await JS.InvokeVoidAsync("rmsInterop.setAccidentLocation", latitude, longitude);
+        }
+        catch (Exception exception) when (exception is ApiClientException or HttpRequestException)
+        {
+            isLocating = false;
+            locationError = ErrorMessage(exception, "اعتبارسنجی موقعیت حادثه روی مسیر با خطا مواجه شد.");
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        selectedLatitude = latitude;
+        selectedLongitude = longitude;
+        gpsAccuracy = accuracy;
+        locationError = null;
+        isLocating = false;
+        draft["Latitude"] = latitude.ToString("G17", CultureInfo.InvariantCulture);
+        draft["Longitude"] = longitude.ToString("G17", CultureInfo.InvariantCulture);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public async Task OnAccidentGeolocationError(int errorCode)
+    {
+        isLocating = false;
+        locationError = errorCode switch
+        {
+            1 => "اجازه دسترسی به موقعیت مکانی داده نشد. دسترسی Location مرورگر را فعال کنید.",
+            2 => "موقعیت دستگاه در دسترس نیست. GPS یا سرویس مکان‌یابی را بررسی کنید.",
+            3 => "دریافت موقعیت بیش از حد طول کشید. دوباره تلاش کنید.",
+            _ => "مرورگر یا دستگاه امکان دریافت موقعیت مکانی را فراهم نکرد."
+        };
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task CreateAsync(IReadOnlyDictionary<string, string> values) => AccidentApi.CreateAsync(new CreateAccidentCommand
+    {
+        FkIdRoad = FormValues.Guid(values, "Road", "راه یا محدوده"),
+        AccidentTimeUnix = FormValues.UnixTime(values, "Date", "زمان وقوع"),
+        Latitude = FormValues.Double(values, "Latitude", "عرض جغرافیایی"),
+        Longitude = FormValues.Double(values, "Longitude", "طول جغرافیایی"),
+        Weather = FormValues.Enum<WeatherConditionEnums>(values, "Weather", "وضعیت آب‌وهوا"),
+        RoadCondition = FormValues.Enum<RoadConditionEnums>(values, "RoadCondition", "وضعیت سطح راه"),
+        LightingCondition = FormValues.Enum<LightingConditionEnums>(values, "Lighting", "وضعیت روشنایی"),
+        TrafficSignCondition = FormValues.Enum<TrafficSignConditionEnums>(values, "Sign", "وضعیت علائم"),
+        AccidentCause = FormValues.Enum<AccidentCauseEnums>(values, "Cause", "علت حادثه"),
+        AccidentType = FormValues.Enum<AccidentTypeEnums>(values, "Type", "نوع برخورد")
+    });
+
+    private Task UpdateAsync(Guid id, IReadOnlyDictionary<string, string> values) => AccidentApi.UpdateAsync(id, new UpdateAccidentCommand
+    {
+        Id = id,
+        FkIdRoad = FormValues.Guid(values, "Road", "راه یا محدوده"),
+        AccidentTimeUnix = FormValues.UnixTime(values, "Date", "زمان وقوع"),
+        Latitude = FormValues.Double(values, "Latitude", "عرض جغرافیایی"),
+        Longitude = FormValues.Double(values, "Longitude", "طول جغرافیایی"),
+        Weather = FormValues.Enum<WeatherConditionEnums>(values, "Weather", "وضعیت آب‌وهوا"),
+        RoadCondition = FormValues.Enum<RoadConditionEnums>(values, "RoadCondition", "وضعیت سطح راه"),
+        LightingCondition = FormValues.Enum<LightingConditionEnums>(values, "Lighting", "وضعیت روشنایی"),
+        TrafficSignCondition = FormValues.Enum<TrafficSignConditionEnums>(values, "Sign", "وضعیت علائم"),
+        AccidentCause = FormValues.Enum<AccidentCauseEnums>(values, "Cause", "علت حادثه"),
+        AccidentType = FormValues.Enum<AccidentTypeEnums>(values, "Type", "نوع برخورد")
+    });
+
+    private Task DeleteAsync(Guid id) => AccidentApi.DeleteAsync(id);
+
+    private static EntityRow ToRow(AccidentListItemResponse accident) => new()
+    {
+        Id = accident.Id,
+        Status = accident.InjuryPercentage >= 70 ? "شدید" : accident.InjuryPercentage >= 30 ? "متوسط" : "ثبت‌شده",
+        StatusTone = RmsUi.InjuryTone(accident.InjuryPercentage),
+        Values = new()
+        {
+            ["Code"] = $"ACC-{RmsUi.ShortId(accident.Id)}",
+            ["Road"] = accident.RoadName,
+            ["Type"] = RmsUi.AccidentType(accident.AccidentType),
+            ["Weather"] = RmsUi.Weather(accident.Weather),
+            ["People"] = $"{accident.PeopleCount.ToString().TranslateDigits()} نفر",
+            ["Date"] = RmsUi.DateTime(accident.AccidentTimeUnix),
+        }
+    };
+
+    private static IReadOnlyDictionary<string, string> ToDraft(AccidentResponse accident) =>
+        new Dictionary<string, string>
+        {
+            ["Road"] = accident.FkIdRoad.ToString(),
+            ["Date"] = RmsUi.DateTimeInput(accident.AccidentTimeUnix),
+            ["Latitude"] = accident.Latitude.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["Longitude"] = accident.Longitude.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["Weather"] = Convert.ToByte(accident.Weather).ToString(),
+            ["RoadCondition"] = Convert.ToByte(accident.RoadCondition).ToString(),
+            ["Lighting"] = Convert.ToByte(accident.LightingCondition).ToString(),
+            ["Sign"] = Convert.ToByte(accident.TrafficSignCondition).ToString(),
+            ["Cause"] = Convert.ToByte(accident.AccidentCause).ToString(),
+            ["Type"] = Convert.ToByte(accident.AccidentType).ToString()
+        };
+
+    private static LookupOption[] EnumOptions<TEnum>(Func<TEnum, string> label)
+        where TEnum : struct, Enum => Enum.GetValues<TEnum>()
+            .Select(value => new LookupOption(Convert.ToByte(value).ToString(), label(value)))
+            .ToArray();
+
+    private string CoordinateLabel => selectedLatitude.HasValue && selectedLongitude.HasValue
+        ? $"{selectedLatitude.Value.ToString("0.000000", CultureInfo.InvariantCulture)}, {selectedLongitude.Value.ToString("0.000000", CultureInfo.InvariantCulture)}"
+        : string.Empty;
+
+    private static Guid? ParseRoadId(IReadOnlyDictionary<string, string> values) =>
+        values.TryGetValue("Road", out var value) && Guid.TryParse(value, out var roadId) ? roadId : null;
+
+    private static double? ParseCoordinate(IReadOnlyDictionary<string, string> values, string key) =>
+        values.TryGetValue(key, out var value)
+        && double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var coordinate)
+            ? coordinate
+            : null;
+
+    private IReadOnlyList<IReadOnlyList<MapPoint>> BuildSelectedRoadPaths()
+        => selectedRoadGeometry is null ? [] : RoutePaths(selectedRoadGeometry);
+
+    private async Task LoadSelectedRoadGeometryAsync()
+    {
+        selectedRoadGeometry = null;
+        if (!selectedAccidentRoadId.HasValue)
+            return;
+
+        try
+        {
+            selectedRoadGeometry = (await RoadApi.GetGeometryAsync(selectedAccidentRoadId.Value)).Boundary;
+        }
+        catch (Exception exception) when (exception is ApiClientException or HttpRequestException)
+        {
+            locationError = ErrorMessage(exception, "دریافت هندسه راه انتخاب‌شده با خطا مواجه شد.");
+        }
+    }
+
+    private static IReadOnlyList<IReadOnlyList<MapPoint>> RoutePaths(Geometry geometry)
+    {
+        static IReadOnlyList<MapPoint> ConvertCoordinates(Coordinate[] coordinates)
+        {
+            if (coordinates.Length > 1 && coordinates[0].Equals2D(coordinates[^1]))
+                coordinates = coordinates[..^1];
+            return coordinates
+                .Select(coordinate => new MapPoint(coordinate.Y, coordinate.X))
+                .ToArray();
+        }
+
+        return geometry switch
+        {
+            LineString lineString => [ConvertCoordinates(lineString.Coordinates)],
+            MultiLineString multiLineString => Enumerable.Range(0, multiLineString.NumGeometries)
+                .Select(index => (IReadOnlyList<MapPoint>)ConvertCoordinates(
+                    ((LineString)multiLineString.GetGeometryN(index)).Coordinates))
+                .ToArray(),
+            Polygon polygon => [ConvertCoordinates(polygon.ExteriorRing.Coordinates)],
+            MultiPolygon multiPolygon => Enumerable.Range(0, multiPolygon.NumGeometries)
+                .Select(index => (IReadOnlyList<MapPoint>)ConvertCoordinates(
+                    ((Polygon)multiPolygon.GetGeometryN(index)).ExteriorRing.Coordinates))
+                .ToArray(),
+            _ => [ConvertCoordinates(geometry.Coordinates)]
+        };
+    }
+
+    private string GetDraft(string key) => draft.GetValueOrDefault(key, string.Empty);
+    private void SetDraft(string key, object? value) => draft[key] = value?.ToString() ?? string.Empty;
+    private DateTime AccidentDatePicker
+    {
+        get => accidentDatePicker;
+        set
+        {
+            accidentDatePicker = value;
+            draft["Date"] = value.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture);
+        }
+    }
+
+    private void SyncAccidentDatePickerFromDraft()
+    {
+        if (DateTime.TryParseExact(GetDraft("Date"), "yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture,
+            DateTimeStyles.None, out var value))
+        {
+            accidentDatePicker = value;
+        }
+    }
+
+    private void OnAccidentDateChanged()
+    {
+        if (accidentDatePickerComponent is not null)
+            AccidentDatePicker = accidentDatePickerComponent.SelectDate ?? DateTime.Now;
+    }
+    private void ChangeWeather(ChangeEventArgs eventArgs) => SetDraft("Weather", eventArgs.Value);
+    private void ChangeRoadCondition(ChangeEventArgs eventArgs) => SetDraft("RoadCondition", eventArgs.Value);
+    private void ChangeLighting(ChangeEventArgs eventArgs) => SetDraft("Lighting", eventArgs.Value);
+    private void ChangeSign(ChangeEventArgs eventArgs) => SetDraft("Sign", eventArgs.Value);
+    private void ChangeCause(ChangeEventArgs eventArgs) => SetDraft("Cause", eventArgs.Value);
+    private void ChangeType(ChangeEventArgs eventArgs) => SetDraft("Type", eventArgs.Value);
+
+    private static bool IsExpectedException(Exception exception) =>
+        exception is ApiClientException or HttpRequestException or FormatException or InvalidOperationException or ArgumentException;
+
+    private static string ErrorMessage(Exception exception, string fallback) => exception switch
+    {
+        ApiClientException apiException => apiException.Message,
+        HttpRequestException => "ارتباط با RMS.Api برقرار نشد. از اجرا بودن سرویس مطمئن شوید.",
+        _ => fallback
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("rmsInterop.disposeAccidentLocationMap");
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        accidentMapReference?.Dispose();
+        accidentMapReference = null;
+    }
+
+    private sealed record MapPoint(double Latitude, double Longitude);
+}

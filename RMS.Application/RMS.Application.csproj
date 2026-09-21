@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Mapster" Version="10.0.12" />
+  </ItemGroup>
+
+
+	<ItemGroup>
+    <ProjectReference Include="..\RMS.Domain\RMS.Domain.csproj" />
+
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="RMS.Application.Tests" />
+  </ItemGroup>
+
+</Project>

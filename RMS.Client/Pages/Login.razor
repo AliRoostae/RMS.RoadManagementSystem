@@ -1,0 +1,137 @@
+@page "/login"
+@layout AuthLayout
+@inject NavigationManager Navigation
+@inject AuthenticationService Authentication
+@inject RmsAuthenticationStateProvider AuthenticationState
+
+<PageTitle>ورود به راه‌بان کیان</PageTitle>
+
+<div class="login-page">
+    <section class="login-showcase">
+        <img class="login-showcase-image" src="images/login-road.webp" alt="جاده و مدیریت ایمن حوادث" loading="lazy" decoding="async" />
+        <div class="login-brand">
+            <span class="brand-mark brand-mark-light"><i class="bi bi-sign-turn-right-fill"></i></span>
+            <div><strong>راه‌بان کیان</strong><small>سامانه مدیریت هوشمند راه‌ها</small></div>
+        </div>
+
+        <div class="showcase-content">
+            <span class="showcase-badge"><i class="bi bi-stars"></i> مدیریت یکپارچه، تصمیم‌گیری هوشمند</span>
+            <h1>راه‌ها را ایمن‌تر<br />مدیریت کنید.</h1>
+            <p>ثبت و تحلیل حوادث، مدیریت محدوده‌های جاده‌ای و پایش شاخص‌های ایمنی در یک نمای ساده و حرفه‌ای.</p>
+            <div class="showcase-stats">
+                <div><strong><i class="bi bi-shield-check"></i></strong><span>احراز هویت JWT</span></div>
+                <div><strong><i class="bi bi-person-lock"></i></strong><span>دسترسی مبتنی بر نقش</span></div>
+                <div><strong><i class="bi bi-cloud-check"></i></strong><span>اتصال مستقیم به API</span></div>
+            </div>
+        </div>
+
+        <div class="road-visual" aria-hidden="true">
+            <span class="road-line road-line-one"></span><span class="road-line road-line-two"></span>
+            <i class="bi bi-geo-alt-fill pin-one"></i><i class="bi bi-geo-alt-fill pin-two"></i>
+        </div>
+        <div class="showcase-footer"><i class="bi bi-shield-check"></i> داده‌های شما با استانداردهای امنیتی محافظت می‌شوند.</div>
+    </section>
+
+    <section class="login-form-side">
+        <div class="mobile-login-brand">
+            <span class="brand-mark"><i class="bi bi-sign-turn-right-fill"></i></span><strong>راه‌بان کیان</strong>
+        </div>
+        <div class="login-card">
+            <div class="login-heading">
+                <span class="login-icon"><i class="bi bi-person-check"></i></span>
+                <h2>خوش آمدید</h2>
+                <p>برای ورود به پنل مدیریت، اطلاعات حساب خود را وارد کنید.</p>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="app-alert danger" role="alert">
+                    <i class="bi bi-exclamation-circle"></i>
+                    <span>@errorMessage</span>
+                </div>
+            }
+
+            <EditForm Model="model" OnValidSubmit="HandleLoginAsync">
+                <DataAnnotationsValidator />
+                <div class="form-group full-width">
+                    <label for="mobile">شماره موبایل</label>
+                    <div class="input-with-icon">
+                        <i class="bi bi-phone"></i>
+                        <InputText id="mobile" inputmode="tel" autocomplete="username" @bind-Value="model.MobileNumber" placeholder="مثلاً ۰۹۱۲۱۲۳۴۵۶۷" disabled="@isSubmitting" />
+                    </div>
+                    <ValidationMessage For="() => model.MobileNumber" />
+                </div>
+                <div class="form-group full-width">
+                    <div class="label-row"><label for="password">رمز عبور</label></div>
+                    <div class="input-with-icon">
+                        <i class="bi bi-lock"></i>
+                        <InputText id="password" type="@(showPassword ? "text" : "password")" autocomplete="current-password" @bind-Value="model.Password" placeholder="رمز عبور خود را وارد کنید" disabled="@isSubmitting" />
+                        <button type="button" @onclick="TogglePassword" disabled="@isSubmitting" aria-label="نمایش یا مخفی کردن رمز عبور"><i class="bi @(showPassword ? "bi-eye-slash" : "bi-eye")"></i></button>
+                    </div>
+                    <ValidationMessage For="() => model.Password" />
+                </div>
+                <label class="remember-row"><InputCheckbox @bind-Value="rememberMe" disabled="@isSubmitting" /><span>مرا به خاطر بسپار</span></label>
+                <button class="btn btn-primary login-button" type="submit" disabled="@isSubmitting">
+                    @if (isSubmitting)
+                    {
+                        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span><span>در حال ورود...</span>
+                    }
+                    else
+                    {
+                        <span>ورود به سامانه</span><i class="bi bi-arrow-left"></i>
+                    }
+                </button>
+            </EditForm>
+
+            <div class="demo-note"><i class="bi bi-shield-lock"></i><span>اطلاعات ورود از طریق API اعتبارسنجی می‌شود و دسترسی صفحات مطابق مجوزهای حساب شما خواهد بود.</span></div>
+            <div class="login-help">برای دریافت یا بازیابی دسترسی با مدیر سامانه تماس بگیرید.</div>
+        </div>
+    </section>
+</div>
+
+@code {
+    private readonly LoginRequest model = new();
+    private bool showPassword;
+    private bool rememberMe = true;
+    private bool isSubmitting;
+    private string? errorMessage;
+
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if ((await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true)
+            Navigation.NavigateTo(GetSafeReturnUrl(), replace: true);
+    }
+
+    private void TogglePassword() => showPassword = !showPassword;
+
+    private async Task HandleLoginAsync()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+        try
+        {
+            await Authentication.LoginAsync(model, rememberMe);
+            Navigation.NavigateTo(GetSafeReturnUrl(), replace: true);
+        }
+        catch (ApiClientException exception)
+        {
+            errorMessage = exception.Message;
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "ارتباط با سرویس ورود برقرار نشد. از اجرا بودن RMS.Api مطمئن شوید.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private string GetSafeReturnUrl() =>
+        !string.IsNullOrWhiteSpace(ReturnUrl) && ReturnUrl.StartsWith('/') && !ReturnUrl.StartsWith("//")
+            ? ReturnUrl
+            : "/";
+}

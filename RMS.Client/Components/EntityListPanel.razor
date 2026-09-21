@@ -1,0 +1,169 @@
+@implements IDisposable
+
+@if (!string.IsNullOrWhiteSpace(ErrorMessage))
+{
+    <div class="app-alert danger"><i class="bi bi-exclamation-circle"></i><span>@ErrorMessage</span></div>
+}
+@if (!string.IsNullOrWhiteSpace(SuccessMessage))
+{
+    <div class="app-alert success"><i class="bi bi-check2-circle"></i><span>@SuccessMessage</span></div>
+}
+
+<section class="panel-card">
+    <div class="panel-toolbar">
+        <div class="search-field">
+            <i class="bi bi-search"></i>
+            <input value="@searchTerm" @oninput="OnSearchInputAsync" placeholder="@SearchPlaceholder" />
+        </div>
+        <div class="toolbar-actions">
+            @if (ToolbarContent is not null)
+            {
+                @ToolbarContent
+            }
+            <button class="btn btn-light app-button" type="button" @onclick="ReloadAsync" disabled="@IsLoading">
+                <i class="bi bi-arrow-clockwise"></i> تازه‌سازی
+            </button>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="app-table">
+            <thead>
+                <tr>
+                    <th class="index-cell">ردیف</th>
+                    @foreach (var column in Columns)
+                    {
+                        <th class="@column.CssClass">@column.Title</th>
+                    }
+                    <th>وضعیت</th>
+                    <th class="actions-cell entity-actions-cell">عملیات</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (IsLoading)
+                {
+                    <tr><td colspan="@(Columns.Count + 3)"><div class="table-loading"><span class="spinner-border spinner-border-sm"></span> در حال دریافت اطلاعات از API...</div></td></tr>
+                }
+                else if (Rows.Count == 0)
+                {
+                    <tr><td colspan="@(Columns.Count + 3)"><div class="empty-inline"><i class="bi bi-inbox"></i> رکوردی از API دریافت نشد.</div></td></tr>
+                }
+                else
+                {
+                    var index = currentPage * PageSize;
+                    @foreach (var row in Rows)
+                    {
+                        index++;
+                        <tr>
+                            <td class="index-cell">@ToPersian(index)</td>
+                            @foreach (var column in Columns)
+                            {
+                                <td class="@column.CssClass">@GetValue(row, column.Key)</td>
+                            }
+                            <td><span class="status-badge @row.StatusTone"><span></span>@row.Status</span></td>
+                            <td class="actions-cell entity-actions-cell">
+                                @if (RowActions is not null)
+                                {
+                                    <div class="entity-row-actions">@RowActions(row)</div>
+                                }
+                                else
+                                {
+                                    <span class="muted-value">—</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="panel-pagination">
+        <span>نمایش @ToPersian(Rows.Count) رکورد از @ToPersian(TotalCount) رکورد</span>
+        <div class="pagination-buttons">
+            <button type="button" title="صفحه قبل" disabled="@(currentPage == 0 || IsLoading)" @onclick="PreviousPageAsync"><i class="bi bi-chevron-right"></i></button>
+            <button type="button" class="active">@ToPersian(currentPage + 1)</button>
+            <button type="button" title="صفحه بعد" disabled="@(currentPage >= PageCount - 1 || IsLoading)" @onclick="NextPageAsync"><i class="bi bi-chevron-left"></i></button>
+        </div>
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<EntityColumn> Columns { get; set; } = [];
+    [Parameter, EditorRequired] public IReadOnlyList<EntityRow> Rows { get; set; } = [];
+    [Parameter] public int TotalCount { get; set; }
+    [Parameter] public int PageSize { get; set; } = 20;
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public string SearchPlaceholder { get; set; } = "جست‌وجو...";
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public string? SuccessMessage { get; set; }
+    [Parameter] public RenderFragment? ToolbarContent { get; set; }
+    [Parameter] public RenderFragment<EntityRow>? RowActions { get; set; }
+    [Parameter] public EventCallback<EntityPageRequest> QueryChanged { get; set; }
+
+    private string searchTerm = string.Empty;
+    private int currentPage;
+    private CancellationTokenSource? queryCancellation;
+
+    private int PageCount => Math.Max(1, (int)Math.Ceiling(TotalCount / (double)Math.Max(1, PageSize)));
+
+    protected override void OnParametersSet()
+    {
+        if (currentPage >= PageCount)
+            currentPage = Math.Max(0, PageCount - 1);
+    }
+
+    public Task ReloadAsync() => RequestServerPageAsync();
+
+    private async Task OnSearchInputAsync(ChangeEventArgs eventArgs)
+    {
+        searchTerm = eventArgs.Value?.ToString() ?? string.Empty;
+        currentPage = 0;
+        await RequestServerPageAsync(TimeSpan.FromMilliseconds(350));
+    }
+
+    private async Task PreviousPageAsync()
+    {
+        currentPage = Math.Max(0, currentPage - 1);
+        await RequestServerPageAsync();
+    }
+
+    private async Task NextPageAsync()
+    {
+        currentPage = Math.Min(PageCount - 1, currentPage + 1);
+        await RequestServerPageAsync();
+    }
+
+    private async Task RequestServerPageAsync(TimeSpan? debounce = null)
+    {
+        if (!QueryChanged.HasDelegate)
+            return;
+
+        queryCancellation?.Cancel();
+        queryCancellation?.Dispose();
+        queryCancellation = new CancellationTokenSource();
+        var token = queryCancellation.Token;
+        try
+        {
+            if (debounce.HasValue)
+                await Task.Delay(debounce.Value, token);
+            await QueryChanged.InvokeAsync(new EntityPageRequest(
+                currentPage * Math.Max(1, PageSize),
+                Math.Max(1, PageSize),
+                searchTerm.Trim(),
+                token));
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+        }
+    }
+
+    private static string GetValue(EntityRow row, string key) => row.Values.GetValueOrDefault(key, "—");
+    private static string ToPersian(int value) => value.ToString().TranslateDigits();
+
+    public void Dispose()
+    {
+        queryCancellation?.Cancel();
+        queryCancellation?.Dispose();
+    }
+}

@@ -1,0 +1,21 @@
+<article class="stat-card">
+    <div class="stat-card-top">
+        <span class="stat-icon @Tone"><i class="bi @Icon"></i></span>
+        <span class="trend @(TrendUp ? "trend-up" : "trend-down")">
+            <i class="bi @(TrendUp ? "bi-arrow-up-left" : "bi-arrow-down-left")"></i>@Trend
+        </span>
+    </div>
+    <div class="stat-value">@Value</div>
+    <div class="stat-label">@Label</div>
+    <div class="stat-hint">@Hint</div>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Value { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Icon { get; set; } = "bi-activity";
+    [Parameter] public string Tone { get; set; } = "primary";
+    [Parameter] public string Trend { get; set; } = "۰٪";
+    [Parameter] public bool TrendUp { get; set; } = true;
+    [Parameter] public string Hint { get; set; } = "نسبت به ماه گذشته";
+}

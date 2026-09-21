@@ -1,0 +1,484 @@
+@page "/people"
+@page "/accidents/{AccidentId:guid}/people"
+@attribute [Authorize]
+@inject AccidentApiService AccidentApi
+@inject PeopleApiService PeopleApi
+@inject RmsAuthenticationStateProvider AuthenticationState
+
+<PageTitle>@PageTitleText | راه‌بان کیان</PageTitle>
+
+<PageHeader Title="@PageTitleText" Description="@PageDescription" Eyebrow="اطلاعات حوادث">
+    <Actions>
+        @if (AccidentId.HasValue)
+        {
+            <a class="btn btn-light app-button" href="/accidents"><i class="bi bi-arrow-right"></i> بازگشت به حوادث</a>
+        }
+        @if (CanCreateHere)
+        {
+            <button class="btn btn-primary app-button" type="button" @onclick="OpenCreate">
+                <i class="bi bi-plus-lg"></i> افزودن فرد
+            </button>
+        }
+    </Actions>
+</PageHeader>
+
+@if (!CanList)
+{
+    <section class="panel-card access-denied-card">
+        <span><i class="bi bi-shield-lock"></i></span>
+        <h2>دسترسی به این بخش مجاز نیست</h2>
+        <p>برای مشاهده عابر باید مجوز گزارش این بخش را داشته باشید.</p>
+    </section>
+}
+else
+{
+    @if (parentAccident is not null)
+    {
+        <section class="entity-context-card">
+            <span class="entity-context-icon"><i class="bi bi-exclamation-octagon"></i></span>
+            <div>
+                <small>حادثه انتخاب‌شده</small>
+                <strong>ACC-@RmsUi.ShortId(parentAccident.Id)</strong>
+                <span>@RmsUi.DateTime(parentAccident.AccidentTimeUnix) · @RmsUi.AccidentType(parentAccident.AccidentType)</span>
+            </div>
+            @if (CanListCars)
+            {
+                <a class="btn btn-light app-button" href="@($"/accidents/{parentAccident.Id}/cars")"><i class="bi bi-car-front"></i> خودروهای حادثه</a>
+            }
+        </section>
+    }
+
+    <EntityListPanel @key="AccidentId" @ref="listPanel" Columns="Columns" Rows="rows" IsLoading="isLoading"
+                     TotalCount="totalCount" ErrorMessage="@pageError" SuccessMessage="@successMessage"
+                     SearchPlaceholder="جست‌وجو با نام یا کد ملی..." QueryChanged="LoadPageAsync">
+        <RowActions Context="row">
+            @if (CanUpdate)
+            {
+                <button type="button" class="table-action" title="ویرایش فرد" @onclick="() => OpenEditAsync(row)"><i class="bi bi-pencil-square"></i></button>
+            }
+            @if (CanDelete)
+            {
+                <button type="button" class="table-action danger" title="حذف فرد" @onclick="() => AskDelete(row)"><i class="bi bi-trash3"></i></button>
+            }
+        </RowActions>
+    </EntityListPanel>
+}
+
+<AppModal IsOpen="modalOpen" Large="true" Title="@(editingRow is null ? "افزودن فرد" : "ویرایش فرد")"
+          Subtitle="فرد به حادثه جاری منتسب می‌شود و نیازی به انتخاب دوباره حادثه نیست." Icon="bi-person-walking" OnClose="CloseModal">
+    <ChildContent>
+        @if (isLoadingEditor)
+        {
+            <div class="table-loading"><span class="spinner-border spinner-border-sm"></span> در حال دریافت جزئیات فرد...</div>
+        }
+        else
+        {
+            @if (!string.IsNullOrWhiteSpace(mutationError))
+            {
+                <div class="app-alert danger"><i class="bi bi-exclamation-circle"></i><span>@mutationError</span></div>
+            }
+            <form id="person-form" @onsubmit="SaveAsync" @onsubmit:preventDefault="true">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="person-national-code">کد ملی</label>
+                        <input id="person-national-code" value="@GetDraft("NationalCode")" placeholder="0012345678" required @oninput="ChangeNationalCode" />
+                    </div>
+                    <div class="form-group">
+                        <label for="person-name">نام و نام خانوادگی</label>
+                        <input id="person-name" value="@GetDraft("Name")" placeholder="نام کامل" required @oninput="ChangeName" />
+                    </div>
+                    <div class="form-group">
+                        <label for="person-gender">جنسیت</label>
+                        <select id="person-gender" value="@GetDraft("Gender")" required @onchange="ChangeGender">
+                            <option value="">انتخاب کنید</option>
+                            @foreach (var value in Enum.GetValues<GenderEnums>())
+                            {
+                                <option value="@Convert.ToByte(value)">@RmsUi.Gender(value)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="person-age">سن</label>
+                        <input id="person-age" type="number" min="1" max="150" value="@GetDraft("Age")" placeholder="42" required @oninput="ChangeAge" />
+                    </div>
+                    <div class="form-group">
+                        <label for="person-injury">درصد آسیب</label>
+                        <input id="person-injury" type="number" min="0" max="100" value="@GetDraft("Injury")" placeholder="25" required @oninput="ChangeInjury" />
+                    </div>
+                    <div class="form-group">
+                        <label for="person-damage-type">نوع آسیب</label>
+                        <select id="person-damage-type" value="@GetDraft("DamageType")" required @onchange="ChangeDamageType">
+                            <option value="">انتخاب کنید</option>
+                            @foreach (var value in Enum.GetValues<DamageTypePersonEnum>())
+                            {
+                                <option value="@Convert.ToByte(value)">@RmsUi.DamageType(value)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="person-description">توضیحات تکمیلی</label>
+                        <textarea id="person-description" rows="3" value="@GetDraft("Description")" placeholder="شرح وضعیت فرد..." @oninput="ChangeDescription"></textarea>
+                    </div>
+                </div>
+            </form>
+        }
+    </ChildContent>
+    <Footer>
+        <button type="button" class="btn btn-light app-button" @onclick="CloseModal" disabled="@isMutating">انصراف</button>
+        @if (!isLoadingEditor)
+        {
+            <button type="submit" form="person-form" class="btn btn-primary app-button" disabled="@isMutating">
+                @if (isMutating)
+                {
+                    <span class="spinner-border spinner-border-sm"></span><span>در حال ذخیره...</span>
+                }
+                else
+                {
+                    <i class="bi bi-check2-circle"></i><span>ذخیره اطلاعات</span>
+                }
+            </button>
+        }
+    </Footer>
+</AppModal>
+
+<AppModal IsOpen="deleteModalOpen" Title="حذف فرد" Subtitle="این عملیات در API انجام می‌شود و قابل بازگشت نیست."
+          Icon="bi-trash3" OnClose="CloseDeleteModal">
+    <ChildContent>
+        <div class="delete-confirmation">
+            <span><i class="bi bi-exclamation-triangle"></i></span>
+            <div><strong>از حذف این فرد مطمئن هستید؟</strong><p>اطلاعات حذف‌شده قابل بازیابی نیست.</p></div>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(deleteError))
+        {
+            <div class="app-alert danger"><i class="bi bi-exclamation-circle"></i><span>@deleteError</span></div>
+        }
+    </ChildContent>
+    <Footer>
+        <button type="button" class="btn btn-light app-button" @onclick="CloseDeleteModal" disabled="@isMutating">انصراف</button>
+        <button type="button" class="btn btn-danger app-button" @onclick="ConfirmDeleteAsync" disabled="@isMutating">
+            @if (isMutating)
+            {
+                <span class="spinner-border spinner-border-sm"></span><span>در حال حذف...</span>
+            }
+            else
+            {
+                <i class="bi bi-trash3"></i><span>حذف</span>
+            }
+        </button>
+    </Footer>
+</AppModal>
+
+@code {
+    [Parameter] public Guid? AccidentId { get; set; }
+
+    private static readonly EntityColumn[] allColumns =
+    [
+        new("NationalCode", "کد ملی"), new("Name", "نام و نام خانوادگی"), new("Gender", "جنسیت"),
+        new("Age", "سن"), new("Accident", "حادثه مرتبط"), new("Injury", "آسیب")
+    ];
+
+    private static readonly EntityColumn[] scopedColumns =
+    [
+        new("NationalCode", "کد ملی"), new("Name", "نام و نام خانوادگی"), new("Gender", "جنسیت"),
+        new("Age", "سن"), new("Injury", "آسیب")
+    ];
+
+    private readonly List<EntityRow> rows = [];
+    private readonly Dictionary<string, string> draft = new(StringComparer.OrdinalIgnoreCase);
+    private EntityListPanel? listPanel;
+    private AccidentResponse? parentAccident;
+    private EntityRow? editingRow;
+    private EntityRow? deletingRow;
+    private int totalCount;
+    private bool isLoading = true;
+    private bool modalOpen;
+    private bool deleteModalOpen;
+    private bool isLoadingEditor;
+    private bool isMutating;
+    private string? pageError;
+    private string? mutationError;
+    private string? deleteError;
+    private string? successMessage;
+
+    private IReadOnlyList<EntityColumn> Columns => AccidentId.HasValue ? scopedColumns : allColumns;
+    private string PageTitleText => AccidentId.HasValue ? $"افراد حادثه ACC-{RmsUi.ShortId(AccidentId.Value)}" : "عابر";
+    private string PageDescription => AccidentId.HasValue
+        ? "ثبت عابر و سایر افراد همین حادثه؛ شناسه حادثه به‌صورت خودکار اعمال می‌شود."
+        : "فهرست همه عابر؛ برای ثبت فرد از صفحه حادثه وارد شوید.";
+
+    private bool CanList => AuthenticationState.HasPermission(UserSection.People, UserAccessOperation.Report);
+    private bool CanCreate => AuthenticationState.HasPermission(UserSection.People, UserAccessOperation.Create);
+    private bool CanCreateHere => CanCreate && AccidentId.HasValue && parentAccident is not null;
+    private bool CanUpdate => AuthenticationState.HasPermission(UserSection.People, UserAccessOperation.View)
+        && AuthenticationState.HasPermission(UserSection.People, UserAccessOperation.Update);
+    private bool CanDelete => AuthenticationState.HasPermission(UserSection.People, UserAccessOperation.Delete);
+    private bool CanListCars => AuthenticationState.HasPermission(UserSection.Cars, UserAccessOperation.Report);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!CanList)
+        {
+            isLoading = false;
+            return;
+        }
+
+        parentAccident = null;
+        pageError = null;
+        if (AccidentId.HasValue)
+        {
+            try
+            {
+                parentAccident = await AccidentApi.GetByIdAsync(AccidentId.Value);
+            }
+            catch (Exception exception) when (exception is ApiClientException or HttpRequestException)
+            {
+                pageError = ErrorMessage(exception, "دریافت اطلاعات حادثه با خطا مواجه شد.");
+                isLoading = false;
+                rows.Clear();
+                totalCount = 0;
+                return;
+            }
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        pageError = null;
+        try
+        {
+            await LoadPageCoreAsync(new EntityPageRequest(0, 20, string.Empty, CancellationToken.None));
+        }
+        catch (Exception exception) when (exception is ApiClientException or HttpRequestException)
+        {
+            pageError = ErrorMessage(exception, "دریافت عابر از API با خطا مواجه شد.");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadPageAsync(EntityPageRequest request)
+    {
+        isLoading = true;
+        pageError = null;
+        try
+        {
+            await LoadPageCoreAsync(request);
+        }
+        catch (OperationCanceledException) when (request.CancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception) when (exception is ApiClientException or HttpRequestException)
+        {
+            pageError = ErrorMessage(exception, "دریافت عابر از API با خطا مواجه شد.");
+        }
+        finally
+        {
+            if (!request.CancellationToken.IsCancellationRequested)
+                isLoading = false;
+        }
+    }
+
+    private async Task LoadPageCoreAsync(EntityPageRequest request)
+    {
+        var result = await PeopleApi.GetAllAsync(new PeopleQueries
+        {
+            AccidentId = AccidentId,
+            Skip = request.Skip,
+            Take = request.Take,
+            SearchTerm = request.SearchTerm
+        }, request.CancellationToken);
+        rows.Clear();
+        rows.AddRange(result.Items.Select(ToRow));
+        totalCount = result.TotalCount;
+    }
+
+    private void OpenCreate()
+    {
+        if (!CanCreateHere)
+            return;
+        editingRow = null;
+        draft.Clear();
+        mutationError = null;
+        isLoadingEditor = false;
+        modalOpen = true;
+    }
+
+    private async Task OpenEditAsync(EntityRow row)
+    {
+        editingRow = row;
+        draft.Clear();
+        mutationError = null;
+        isLoadingEditor = true;
+        modalOpen = true;
+        try
+        {
+            foreach (var item in ToDraft(await PeopleApi.GetByIdAsync(row.Id)))
+                draft[item.Key] = item.Value;
+        }
+        catch (Exception exception) when (IsExpectedException(exception))
+        {
+            mutationError = ErrorMessage(exception, "دریافت جزئیات فرد با خطا مواجه شد.");
+        }
+        finally
+        {
+            isLoadingEditor = false;
+        }
+    }
+
+    private void CloseModal()
+    {
+        if (!isMutating)
+            modalOpen = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        mutationError = null;
+        isMutating = true;
+        try
+        {
+            if (editingRow is null)
+            {
+                if (!AccidentId.HasValue)
+                    throw new InvalidOperationException("ثبت فرد باید از صفحه حادثه انجام شود.");
+                await CreateAsync(AccidentId.Value, draft);
+                successMessage = "فرد با موفقیت برای این حادثه ثبت شد.";
+            }
+            else
+            {
+                await UpdateAsync(editingRow.Id, draft);
+                successMessage = "اطلاعات فرد با موفقیت ویرایش شد.";
+            }
+
+            modalOpen = false;
+            if (listPanel is not null)
+                await listPanel.ReloadAsync();
+            else
+                await LoadAsync();
+        }
+        catch (Exception exception) when (IsExpectedException(exception))
+        {
+            mutationError = ErrorMessage(exception, "ذخیره اطلاعات فرد با خطا مواجه شد.");
+        }
+        finally
+        {
+            isMutating = false;
+        }
+    }
+
+    private void AskDelete(EntityRow row)
+    {
+        deletingRow = row;
+        deleteError = null;
+        deleteModalOpen = true;
+    }
+
+    private void CloseDeleteModal()
+    {
+        if (!isMutating)
+            deleteModalOpen = false;
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        if (deletingRow is null)
+            return;
+        deleteError = null;
+        isMutating = true;
+        try
+        {
+            await PeopleApi.DeleteAsync(deletingRow.Id);
+            deleteModalOpen = false;
+            successMessage = "فرد با موفقیت حذف شد.";
+            if (listPanel is not null)
+                await listPanel.ReloadAsync();
+            else
+                await LoadAsync();
+        }
+        catch (Exception exception) when (IsExpectedException(exception))
+        {
+            deleteError = ErrorMessage(exception, "حذف فرد با خطا مواجه شد.");
+        }
+        finally
+        {
+            isMutating = false;
+        }
+    }
+
+    private Task CreateAsync(Guid accidentId, IReadOnlyDictionary<string, string> values) => PeopleApi.CreateAsync(new CreatePeopleCommand
+    {
+        FkAccident = accidentId,
+        NationalCode = FormValues.Required(values, "NationalCode", "کد ملی"),
+        PassengerFullName = FormValues.Required(values, "Name", "نام و نام خانوادگی"),
+        Gender = FormValues.Enum<GenderEnums>(values, "Gender", "جنسیت"),
+        Age = FormValues.Byte(values, "Age", "سن"),
+        InjuryPercentage = FormValues.Byte(values, "Injury", "درصد آسیب"),
+        TypePersonDamage = FormValues.Enum<DamageTypePersonEnum>(values, "DamageType", "نوع آسیب"),
+        DescriptionDamage = FormValues.Optional(values, "Description")
+    });
+
+    private Task UpdateAsync(Guid id, IReadOnlyDictionary<string, string> values) => PeopleApi.UpdateAsync(id, new UpdatePeopleCommand
+    {
+        Id = id,
+        NationalCode = FormValues.Required(values, "NationalCode", "کد ملی"),
+        PassengerFullName = FormValues.Required(values, "Name", "نام و نام خانوادگی"),
+        Gender = FormValues.Enum<GenderEnums>(values, "Gender", "جنسیت"),
+        Age = FormValues.Byte(values, "Age", "سن"),
+        InjuryPercentage = FormValues.Byte(values, "Injury", "درصد آسیب"),
+        TypePersonDamage = FormValues.Enum<DamageTypePersonEnum>(values, "DamageType", "نوع آسیب"),
+        DescriptionDamage = FormValues.Optional(values, "Description")
+    });
+
+    private static EntityRow ToRow(PeopleListItemResponse person) => new()
+    {
+        Id = person.Id,
+        Status = RmsUi.DamageType(person.DamageType),
+        StatusTone = RmsUi.InjuryTone(person.InjuryPercentage),
+        Values = new()
+        {
+            ["NationalCode"] = person.NationalCode,
+            ["Name"] = person.FullName,
+            ["Gender"] = RmsUi.Gender(person.Gender),
+            ["Age"] = person.Age.ToString().TranslateDigits(),
+            ["Accident"] = person.AccidentCode,
+            ["Injury"] = $"{person.InjuryPercentage.ToString().TranslateDigits()}٪"
+        }
+    };
+
+    private static IReadOnlyDictionary<string, string> ToDraft(PeopleResponse person) => new Dictionary<string, string>
+    {
+        ["NationalCode"] = person.NationalCode,
+        ["Name"] = person.PassengerFullName,
+        ["Gender"] = Convert.ToByte(person.Gender).ToString(),
+        ["Age"] = person.Age.ToString(),
+        ["Injury"] = person.InjuryPercentage.ToString(),
+        ["DamageType"] = Convert.ToByte(person.TypePersonDamage).ToString(),
+        ["Description"] = person.DescriptionDamage
+    };
+
+    private string GetDraft(string key) => draft.GetValueOrDefault(key, string.Empty);
+    private void SetDraft(string key, object? value) => draft[key] = value?.ToString() ?? string.Empty;
+    private void ChangeNationalCode(ChangeEventArgs eventArgs) => SetDraft("NationalCode", eventArgs.Value);
+    private void ChangeName(ChangeEventArgs eventArgs) => SetDraft("Name", eventArgs.Value);
+    private void ChangeGender(ChangeEventArgs eventArgs) => SetDraft("Gender", eventArgs.Value);
+    private void ChangeAge(ChangeEventArgs eventArgs) => SetDraft("Age", eventArgs.Value);
+    private void ChangeInjury(ChangeEventArgs eventArgs) => SetDraft("Injury", eventArgs.Value);
+    private void ChangeDamageType(ChangeEventArgs eventArgs) => SetDraft("DamageType", eventArgs.Value);
+    private void ChangeDescription(ChangeEventArgs eventArgs) => SetDraft("Description", eventArgs.Value);
+
+    private static bool IsExpectedException(Exception exception) =>
+        exception is ApiClientException or HttpRequestException or FormatException or InvalidOperationException or ArgumentException;
+
+    private static string ErrorMessage(Exception exception, string fallback) => exception switch
+    {
+        ApiClientException apiException => apiException.Message,
+        HttpRequestException => "ارتباط با RMS.Api برقرار نشد. از اجرا بودن سرویس مطمئن شوید.",
+        _ when !string.IsNullOrWhiteSpace(exception.Message) => exception.Message,
+        _ => fallback
+    };
+}
