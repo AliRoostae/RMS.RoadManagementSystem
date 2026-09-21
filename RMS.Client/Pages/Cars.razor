@@ -226,10 +226,10 @@ else
     private DatePickerZO? licenseDatePickerComponent;
 
     private IReadOnlyList<EntityColumn> Columns => scopedColumns;
-    private string PageTitleText => AccidentId.HasValue ? $"خودروهای حادثه ACC-{RmsUi.ShortId(AccidentId.Value)}" : "مدیریت خودروها";
+    private string PageTitleText => AccidentId.HasValue ? $"خودروهای حادثه ACC-{RmsUi.ShortId(AccidentId.Value)}" : "انتخاب حادثه برای خودروها";
     private string PageDescription => AccidentId.HasValue
         ? "ثبت و مدیریت خودروهای همین حادثه؛ شناسه حادثه به‌صورت خودکار اعمال می‌شود."
-        : "فهرست همه خودروهای درگیر؛ برای ثبت خودرو از صفحه حادثه وارد شوید.";
+        : "برای مشاهده یا ثبت خودرو، ابتدا از فهرست حوادث یک حادثه را انتخاب کنید.";
 
     private bool CanList => AuthenticationState.HasPermission(UserSection.Cars, UserAccessOperation.Report);
     private bool CanCreate => AuthenticationState.HasPermission(UserSection.Cars, UserAccessOperation.Create);
@@ -493,7 +493,6 @@ else
             ["Plate"] = car.PlateNumber,
             ["Car"] = car.CarName,
             ["Class"] = RmsUi.CarClass(car.CarClass),
-            ["Accident"] = car.AccidentCode,
             ["Year"] = car.ProductionYear.ToString().TranslateDigits(),
             ["Damage"] = $"{car.DamagePercentage.ToString().TranslateDigits()}٪"
         }
