@@ -4,7 +4,6 @@
 @using System.Globalization
 @inject AccidentApiService AccidentApi
 @inject CarApiService CarApi
-@inject LookupApiService LookupApi
 @inject NavigationManager Navigation
 @inject RmsAuthenticationStateProvider AuthenticationState
 
@@ -41,37 +40,11 @@ else
             <span><i class="bi bi-car-front"></i></span>
             <h2>ابتدا حادثه را انتخاب کنید</h2>
             <p>خودروها به حادثه وابسته‌اند. برای مشاهده یا ثبت خودرو، از فهرست حوادث وارد خودروهای همان حادثه شوید.</p>
-            <section>
-                <div class="parent-lookup-guide">
-                    <label>۱. مسیر را انتخواب کنید </label>
-                    
-                        <div class="parent-lookup-guide">
-                            <label>انتخاب مسیر</label>
-                            <AsyncLookup Value="@selectedRoad" ValueChanged="SelectRoadAsync"
-                                         SearchAsync="SearchAccidentsAsync" Placeholder="مسیر را جست‌وجو کنید..." />
-                        </div>
-                   
+            @if (CanListAccidents)
+            {
+                <AccidentWizard AccidentIdChanged="HandleAccidentSelectedAsync" />
+            }
 
-                </div>
-                @if (filterRoadId.HasValue)
-                {
-                    <div class="parent-lookup-guide">
-                        <label>۲. ماه حادثه و انتخاب حادثه</label>
-                        <YearMonthZO @ref="filterMonthPickerComponent" SelectDate="@filterMonth" SelectDateChanged="OnFilterMonthChanged" />
-                    </div>
-               
-                    <div class="parent-lookup-guide">
-                    <label>۳.  حادثه و انتخاب حادثه</label>
-                   
-                        <AsyncLookup Value="@selectedAccident" ValueChanged="SelectAccidentAsync"
-                                     SearchAsync="SearchAccidentsAsync" Placeholder="حادثه را جست‌وجو کنید..." />
-                   
-                </div> }
-
-           
-
-            </section>
-           
      
             @if (CanListAccidents)
             {
@@ -274,13 +247,18 @@ else
     private bool CanListAccidents => AuthenticationState.HasPermission(UserSection.Accidents, UserAccessOperation.Report);
     private bool CanListPassengers => AuthenticationState.HasPermission(UserSection.Passengers, UserAccessOperation.Report);
     private bool CanListPeople => AuthenticationState.HasPermission(UserSection.People, UserAccessOperation.Report);
-    private string selectedRoad = string.Empty;
-    private string selectedAccident = string.Empty;
-    private Guid? filterRoadId;
-    private DateTime filterMonth = DateTime.Now;
-    private YearMonthZO? filterMonthPickerComponent;
+
 
     /// <summary>راه والد را انتخاب می‌کند تا جستجوی حادثه محدود شود.</summary>
+    /// <summary>شناسه حادثه انتخاب‌شده را دریافت و به مسیر خودروها هدایت می‌کند.</summary>
+    private Task HandleAccidentSelectedAsync(Guid? accidentId)
+    {
+        if (accidentId.HasValue)
+            Navigation.NavigateTo($"/accidents/{accidentId.Value}/cars");
+        return Task.CompletedTask;
+    }
+
+    /*
     private Task SelectRoadAsync(string value)
     {
         selectedRoad = value;
@@ -313,6 +291,8 @@ else
         return await AccidentFilterHelper.SearchAccidentsAsync(AccidentApi, filterRoadId, filterMonth, term, token);
     }
   
+
+    */
 
     protected override async Task OnParametersSetAsync()
     {
