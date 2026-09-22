@@ -382,6 +382,23 @@
     display:flex;
     gap:8px
 }
+.parent-lookup-guide {
+    display: grid;
+    gap: 7px;
+    width: min(480px, 100%);
+    margin: 18px 0 4px;
+    padding: 14px;
+    border: 1px solid #dfe3ff;
+    border-radius: 12px;
+    background: #fafaff;
+    text-align: right;
+}
+.parent-lookup-guide label {
+    margin: 0;
+    color: var(--text);
+    font-size: 10px;
+    font-weight: 700;
+}
 .report-result-count {
     display:inline-flex;
     align-items:center;

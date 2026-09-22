@@ -3,6 +3,8 @@
 @attribute [Authorize]
 @inject CarApiService CarApi
 @inject PassengerApiService PassengerApi
+@inject LookupApiService LookupApi
+@inject NavigationManager Navigation
 @inject RmsAuthenticationStateProvider AuthenticationState
 
 <PageTitle>@PageTitleText | راه‌بان کیان</PageTitle>
@@ -38,6 +40,22 @@ else
             <span><i class="bi bi-people"></i></span>
             <h2>ابتدا خودرو را از یک حادثه انتخاب کنید</h2>
             <p>رانندگان و سرنشینان به خودرو وابسته‌اند. برای مشاهده یا ثبت اطلاعات، از فهرست حوادث وارد خودروهای همان حادثه و سپس سرنشینان خودرو شوید.</p>
+            @if (CanListAccidents)
+            {
+                <div class="parent-lookup-guide">
+                    <label>۱. انتخاب حادثه</label>
+                    <AsyncLookup Value="@selectedAccident" ValueChanged="SelectAccidentAsync"
+                                 SearchAsync="SearchAccidentsAsync" Placeholder="حادثه را جست‌وجو کنید..." />
+                </div>
+                @if (!string.IsNullOrWhiteSpace(selectedAccident))
+                {
+                    <div class="parent-lookup-guide">
+                        <label>۲. انتخاب خودرو</label>
+                        <AsyncLookup Value="" ValueChanged="SelectCarAsync"
+                                     SearchAsync="SearchCarsAsync" Placeholder="خودروی حادثه را جست‌وجو کنید..." />
+                    </div>
+                }
+            }
             @if (CanListAccidents)
             {
                 <a class="btn btn-primary app-button" href="/accidents"><i class="bi bi-exclamation-octagon"></i> مشاهده حوادث</a>
@@ -233,6 +251,40 @@ else
     private bool CanDelete => AuthenticationState.HasPermission(UserSection.Passengers, UserAccessOperation.Delete);
     private bool CanListAccidents => AuthenticationState.HasPermission(UserSection.Accidents, UserAccessOperation.Report);
     private bool CanListPeople => AuthenticationState.HasPermission(UserSection.People, UserAccessOperation.Report);
+    private string selectedAccident = string.Empty;
+
+    private Task SelectAccidentAsync(string value)
+    {
+        selectedAccident = value;
+        return Task.CompletedTask;
+    }
+
+    private Task SelectCarAsync(string value)
+    {
+        if (Guid.TryParse(value, out var carId))
+            Navigation.NavigateTo($"/cars/{carId}/passengers");
+        return Task.CompletedTask;
+    }
+
+    private async Task<IReadOnlyList<LookupOption>> SearchAccidentsAsync(string term, CancellationToken token) =>
+        (await LookupApi.GetAccidentsAsync(new AccidentLookupQuery { SearchTerm = term, Take = 20 }, token))
+            .Select(accident => new LookupOption(accident.Id.ToString(), $"{accident.RoadName} · {RmsUi.DateTime(accident.AccidentTimeUnix)}"))
+            .ToArray();
+
+    private async Task<IReadOnlyList<LookupOption>> SearchCarsAsync(string term, CancellationToken token)
+    {
+        if (!Guid.TryParse(selectedAccident, out var accidentId))
+            return [];
+
+        return (await LookupApi.GetCarsAsync(new CarLookupQuery
+        {
+            AccidentId = accidentId,
+            SearchTerm = term,
+            Take = 20
+        }, token))
+            .Select(car => new LookupOption(car.Id.ToString(), $"{car.PlateNumber} · {car.CarName}"))
+            .ToArray();
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -519,6 +571,5 @@ else
         _ => fallback
     };
 }
-
 
 

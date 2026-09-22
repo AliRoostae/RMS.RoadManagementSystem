@@ -4,6 +4,8 @@
 @using System.Globalization
 @inject AccidentApiService AccidentApi
 @inject CarApiService CarApi
+@inject LookupApiService LookupApi
+@inject NavigationManager Navigation
 @inject RmsAuthenticationStateProvider AuthenticationState
 
 <PageTitle>@PageTitleText | راه‌بان کیان</PageTitle>
@@ -39,6 +41,14 @@ else
             <span><i class="bi bi-car-front"></i></span>
             <h2>ابتدا حادثه را انتخاب کنید</h2>
             <p>خودروها به حادثه وابسته‌اند. برای مشاهده یا ثبت خودرو، از فهرست حوادث وارد خودروهای همان حادثه شوید.</p>
+            @if (CanListAccidents)
+            {
+                <div class="parent-lookup-guide">
+                    <label>انتخاب حادثه</label>
+                    <AsyncLookup Value="" ValueChanged="SelectAccidentAsync"
+                                 SearchAsync="SearchAccidentsAsync" Placeholder="حادثه را جست‌وجو کنید..." />
+                </div>
+            }
             @if (CanListAccidents)
             {
                 <a class="btn btn-primary app-button" href="/accidents"><i class="bi bi-exclamation-octagon"></i> مشاهده حوادث</a>
@@ -240,6 +250,18 @@ else
     private bool CanListAccidents => AuthenticationState.HasPermission(UserSection.Accidents, UserAccessOperation.Report);
     private bool CanListPassengers => AuthenticationState.HasPermission(UserSection.Passengers, UserAccessOperation.Report);
     private bool CanListPeople => AuthenticationState.HasPermission(UserSection.People, UserAccessOperation.Report);
+
+    private Task SelectAccidentAsync(string value)
+    {
+        if (Guid.TryParse(value, out var accidentId))
+            Navigation.NavigateTo($"/accidents/{accidentId}/cars");
+        return Task.CompletedTask;
+    }
+
+    private async Task<IReadOnlyList<LookupOption>> SearchAccidentsAsync(string term, CancellationToken token) =>
+        (await LookupApi.GetAccidentsAsync(new AccidentLookupQuery { SearchTerm = term, Take = 20 }, token))
+            .Select(accident => new LookupOption(accident.Id.ToString(), $"{accident.RoadName} · {RmsUi.DateTime(accident.AccidentTimeUnix)}"))
+            .ToArray();
 
     protected override async Task OnParametersSetAsync()
     {
