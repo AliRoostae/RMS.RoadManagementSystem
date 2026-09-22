@@ -3,6 +3,8 @@
 @attribute [Authorize]
 @inject AccidentApiService AccidentApi
 @inject ImageApiService ImageApi
+@inject LookupApiService LookupApi
+@inject NavigationManager Navigation
 @inject RmsAuthenticationStateProvider AuthenticationState
 
 <PageTitle>@PageTitleText | راه‌بان کیان</PageTitle>
@@ -40,6 +42,11 @@ else if (!AccidentId.HasValue)
         <p>تصاویر به حادثه وابسته‌اند. برای مشاهده یا ثبت تصویر، از فهرست حوادث وارد تصاویر همان حادثه شوید.</p>
         @if (CanListAccidents)
         {
+            <div class="parent-lookup-guide">
+                <label>انتخاب حادثه</label>
+                <AsyncLookup Value="" ValueChanged="SelectAccidentAsync"
+                             SearchAsync="SearchAccidentsAsync" Placeholder="حادثه را جست‌وجو کنید..." />
+            </div>
             <a class="btn btn-primary app-button" href="/accidents"><i class="bi bi-exclamation-octagon"></i> مشاهده حوادث</a>
         }
     </section>
@@ -237,6 +244,18 @@ else
     private bool CanDelete => AuthenticationState.HasPermission(UserSection.Images, UserAccessOperation.Delete);
     private bool CanListAccidents => AuthenticationState.HasPermission(UserSection.Accidents, UserAccessOperation.Report);
     private bool CanListCars => AuthenticationState.HasPermission(UserSection.Cars, UserAccessOperation.Report);
+
+    private Task SelectAccidentAsync(string value)
+    {
+        if (Guid.TryParse(value, out var accidentId))
+            Navigation.NavigateTo($"/accidents/{accidentId}/images");
+        return Task.CompletedTask;
+    }
+
+    private async Task<IReadOnlyList<LookupOption>> SearchAccidentsAsync(string term, CancellationToken token) =>
+        (await LookupApi.GetAccidentsAsync(new AccidentLookupQuery { SearchTerm = term, Take = 20 }, token))
+            .Select(accident => new LookupOption(accident.Id.ToString(), $"{accident.RoadName} · {RmsUi.DateTime(accident.AccidentTimeUnix)}"))
+            .ToArray();
 
     protected override async Task OnParametersSetAsync()
     {
