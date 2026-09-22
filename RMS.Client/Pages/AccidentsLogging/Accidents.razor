@@ -32,6 +32,22 @@
 }
 else
 {
+    <section class="panel-card parent-lookup-guide">
+        <label>انتخاب راه</label>
+        <AsyncLookup Value="@selectedRoad" ValueChanged="SelectFilterRoadAsync"
+                     SearchAsync="SearchRoadsAsync" Placeholder="ابتدا نام راه را جست‌وجو کنید..." Required="true" />
+        <label>ماه مورد نظر</label>
+        <YearMonthZO @ref="filterMonthPickerComponent" SelectDate="@filterMonth" SelectDateChanged="OnFilterMonthChanged" />
+       
+        <small class="field-help">لیست حوادث فقط برای راه و ماه انتخاب‌شده دریافت می‌شود.</small>
+    </section>
+
+    @if (!filterRoadId.HasValue)
+    {
+        <section class="panel-card empty-inline"><i class="bi bi-signpost-2"></i> برای دریافت حوادث ابتدا یک راه انتخاب کنید.</section>
+    }
+    else
+    {
     <EntityListPanel @ref="listPanel" Columns="columns" Rows="rows" IsLoading="isLoading"
                      TotalCount="totalCount" ErrorMessage="@pageError" SuccessMessage="@successMessage"
                      SearchPlaceholder="جست‌وجو با نام راه یا شناسه کامل حادثه..." QueryChanged="LoadPageAsync">
@@ -58,6 +74,7 @@ else
             }
         </RowActions>
     </EntityListPanel>
+    }
 }
 
 <AppModal IsOpen="modalOpen" Large="true" Title="@(editingRow is null ? "افزودن حادثه" : "ویرایش حادثه")"
@@ -83,7 +100,7 @@ else
                     </div>
                     <div class="form-group">
                         <label for="accident-date">زمان وقوع حادثه</label>
-                        <DatePickerZO @ref="accidentDatePickerComponent" PopupDatePickerZO="true" Format="yyyy/MM/dd hh:mm:ss"
+                        <DatePickerZO @ref="accidentDatePickerComponent" PopupDatePickerZO="true" 
                                       SelectDate="@AccidentDatePicker" SelectDateChanged="OnAccidentDateChanged" />
                     </div>
                     <div class="form-group">
@@ -289,6 +306,10 @@ else
     private string? successMessage;
     private DateTime accidentDatePicker = DateTime.Now;
     private DatePickerZO? accidentDatePickerComponent;
+    private DateTime filterMonth = DateTime.Now;
+    private YearMonthZO? filterMonthPickerComponent;
+    private string selectedRoad = string.Empty;
+    private Guid? filterRoadId;
 
     private bool CanList => AuthenticationState.HasPermission(UserSection.Accidents, UserAccessOperation.Report);
     private bool CanCreate => AuthenticationState.HasPermission(UserSection.Accidents, UserAccessOperation.Create);
@@ -306,7 +327,7 @@ else
             isLoading = false;
             return;
         }
-        await LoadAsync();
+        isLoading = false;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -330,6 +351,14 @@ else
 
     private async Task LoadAsync()
     {
+        if (!filterRoadId.HasValue)
+        {
+            rows.Clear();
+            totalCount = 0;
+            isLoading = false;
+            return;
+        }
+
         isLoading = true;
         pageError = null;
         try
@@ -372,8 +401,9 @@ else
     {
         var result = await AccidentApi.GetAllAsync(new AccidentQuery
         {
-            StartTime = 946684800,
-            EndTime = 4102444800,
+            StartTime = AccidentFilterHelper.GetPersianMonthRange(filterMonth).StartTime,
+            EndTime = AccidentFilterHelper.GetPersianMonthRange(filterMonth).EndTime,
+            RoadId = filterRoadId,
             Skip = request.Skip,
             Take = request.Take,
             SearchTerm = request.SearchTerm,
@@ -398,6 +428,24 @@ else
         isLoadingEditor = false;
         modalOpen = true;
         await PrepareEditorAsync();
+    }
+
+    /// <summary>راه فیلتر حوادث را انتخاب و فهرست همان راه را بارگذاری می‌کند.</summary>
+    private async Task SelectFilterRoadAsync(string value)
+    {
+        selectedRoad = value;
+        filterRoadId = Guid.TryParse(value, out var roadId) ? roadId : null;
+        rows.Clear();
+        totalCount = 0;
+        await LoadAsync();
+    }
+
+    /// <summary>ماه فیلتر را از تقویم فارسی دریافت و فهرست را تازه می‌کند.</summary>
+    private async Task OnFilterMonthChanged()
+    {
+        filterMonth = filterMonthPickerComponent?.SelectDate ?? DateTime.Now;
+        if (filterRoadId.HasValue)
+            await LoadAsync();
     }
 
     private async Task OpenEditAsync(EntityRow row)
