@@ -1,7 +1,6 @@
 @page "/passengers"
 @page "/cars/{CarId:guid}/passengers"
 @attribute [Authorize]
-@inject AccidentApiService AccidentApi
 @inject CarApiService CarApi
 @inject PassengerApiService PassengerApi
 @inject LookupApiService LookupApi
@@ -45,30 +44,19 @@ else
             {
                 <div class="parent-lookup-guide">
                     <label>۱. انتخاب حادثه</label>
-                    <AsyncLookup Value="@selectedRoad" ValueChanged="SelectRoadAsync"
-                                 SearchAsync="SearchAccidentsAsync" Placeholder="حادثه را جست‌وجو کنید..." />
+                    <AccidentWizard AccidentIdChanged="HandleAccidentSelectedAsync" />
+                    @if (!string.IsNullOrWhiteSpace(selectedAccident))
+                    {
+                        <div class="parent-lookup-guide">
+                            <label>۴. انتخاب خودرو</label>
+                            <AsyncLookup Value="" ValueChanged="SelectCarAsync"
+                                         SearchAsync="SearchCarsAsync" Placeholder="خودروی حادثه را جست‌وجو کنید..." />
+                        </div>
+                    }
                 </div>
-                @if (!CarId.HasValue)
-                {
-                    <div class="parent-lookup-guide">
-                        <label>۲. ماه و انتخاب حادثه</label>
-
-                        <YearMonthZO @ref="filterMonthPickerComponent" SelectDate="@filterMonth" SelectDateChanged="OnFilterMonthChanged" />
-                        @if (filterRoadId.HasValue)
-                        {
-                            <AsyncLookup Value="@selectedAccident" ValueChanged="SelectAccidentAsync"
-                                         SearchAsync="SearchAccidentsAsync" Placeholder="حادثه را جست‌وجو کنید..." />
-                        }
-                    </div>
-                }
-                @if (!string.IsNullOrWhiteSpace(selectedAccident))
-                {
-                    <div class="parent-lookup-guide">
-                        <label>۲. انتخاب خودرو</label>
-                        <AsyncLookup Value="" ValueChanged="SelectCarAsync"
-                                     SearchAsync="SearchCarsAsync" Placeholder="خودروی حادثه را جست‌وجو کنید..." />
-                    </div>
-                }
+               
+           
+               
             }
             @if (CanListAccidents)
             {
@@ -268,31 +256,14 @@ else
     private bool CanListAccidents => AuthenticationState.HasPermission(UserSection.Accidents, UserAccessOperation.Report);
     private bool CanListPeople => AuthenticationState.HasPermission(UserSection.People, UserAccessOperation.Report);
     private string selectedAccident = string.Empty;
-    private string selectedRoad = string.Empty;
-    private Guid? filterRoadId;
-    private DateTime filterMonth = DateTime.Now;
-    private YearMonthZO? filterMonthPickerComponent;
+    
 
     /// <summary>راه والد را انتخاب می‌کند تا جستجوی حادثه محدود شود.</summary>
-    private Task SelectRoadAsync(string value)
-    {
-        selectedRoad = value;
-        filterRoadId = Guid.TryParse(value, out var roadId) ? roadId : null;
-        selectedAccident = string.Empty;
-        return Task.CompletedTask;
-    }
-
     /// <summary>ماه فیلتر حادثه را از تقویم فارسی دریافت می‌کند.</summary>
-    private Task OnFilterMonthChanged()
+    /// <summary>شناسه حادثه خروجی AccidentWizard را برای جستجوی خودرو نگه می‌دارد.</summary>
+    private Task HandleAccidentSelectedAsync(Guid? accidentId)
     {
-        filterMonth = filterMonthPickerComponent?.SelectDate ?? DateTime.Now;
-        selectedAccident = string.Empty;
-        return Task.CompletedTask;
-    }
-
-    private Task SelectAccidentAsync(string value)
-    {
-        selectedAccident = value;
+        selectedAccident = accidentId?.ToString() ?? string.Empty;
         return Task.CompletedTask;
     }
 
@@ -303,13 +274,6 @@ else
         return Task.CompletedTask;
     }
 
-    private async Task<IReadOnlyList<LookupOption>> SearchAccidentsAsync(string term, CancellationToken token)
-    {
-        if (!filterRoadId.HasValue)
-            return (await LookupApi.GetRoadsAsync(new LookupQuery { SearchTerm = term, Take = 20 }, token))
-                .Select(road => new LookupOption(road.Id.ToString(), road.Name)).ToArray();
-        return await AccidentFilterHelper.SearchAccidentsAsync(AccidentApi, filterRoadId, filterMonth, term, token);
-    }
     /*
         (await LookupApi.GetAccidentsAsync(new AccidentLookupQuery { SearchTerm = term, Take = 20 }, token))
             .Select(accident => new LookupOption(accident.Id.ToString(), $"{accident.RoadName} · {RmsUi.DateTime(accident.AccidentTimeUnix)}"))

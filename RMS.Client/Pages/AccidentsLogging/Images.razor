@@ -3,7 +3,6 @@
 @attribute [Authorize]
 @inject AccidentApiService AccidentApi
 @inject ImageApiService ImageApi
-@inject LookupApiService LookupApi
 @inject NavigationManager Navigation
 @inject RmsAuthenticationStateProvider AuthenticationState
 
@@ -42,11 +41,21 @@ else if (!AccidentId.HasValue)
         <p>تصاویر به حادثه وابسته‌اند. برای مشاهده یا ثبت تصویر، از فهرست حوادث وارد تصاویر همان حادثه شوید.</p>
         @if (CanListAccidents)
         {
+            <AccidentWizard AccidentIdChanged="HandleAccidentSelectedAsync" />
+        }
+        @*
+        @if (CanListAccidents)
+        {
             <div class="parent-lookup-guide">
                 <label>انتخاب حادثه</label>
                 <AsyncLookup Value="@selectedRoad" ValueChanged="SelectRoadAsync"
                              SearchAsync="SearchAccidentsAsync" Placeholder="حادثه را جست‌وجو کنید..." />
             </div>
+            <a class="btn btn-primary app-button" href="/accidents"><i class="bi bi-exclamation-octagon"></i> مشاهده حوادث</a>
+        }
+        *@
+        @if (CanListAccidents)
+        {
             <a class="btn btn-primary app-button" href="/accidents"><i class="bi bi-exclamation-octagon"></i> مشاهده حوادث</a>
         }
     </section>
@@ -207,7 +216,8 @@ else
     </div>
 }
 
-@if (!AccidentId.HasValue)
+@*
+@if (false)
 {
     <div class="parent-lookup-guide">
         <label>۲. ماه و انتخاب حادثه</label>
@@ -221,6 +231,8 @@ else
         }
     </div>
 }
+
+*@
 
 @code {
     [Parameter] public Guid? AccidentId { get; set; }
@@ -259,13 +271,16 @@ else
     private bool CanDelete => AuthenticationState.HasPermission(UserSection.Images, UserAccessOperation.Delete);
     private bool CanListAccidents => AuthenticationState.HasPermission(UserSection.Accidents, UserAccessOperation.Report);
     private bool CanListCars => AuthenticationState.HasPermission(UserSection.Cars, UserAccessOperation.Report);
-    private string selectedRoad = string.Empty;
-    private string selectedAccident = string.Empty;
-    private Guid? filterRoadId;
-    private DateTime filterMonth = DateTime.Now;
-    private YearMonthZO? filterMonthPickerComponent;
 
     /// <summary>راه والد را انتخاب می‌کند تا جستجوی حادثه محدود شود.</summary>
+    private Task HandleAccidentSelectedAsync(Guid? accidentId)
+    {
+        if (accidentId.HasValue)
+            Navigation.NavigateTo($"/accidents/{accidentId.Value}/images");
+        return Task.CompletedTask;
+    }
+
+    /*
     private Task SelectRoadAsync(string value)
     {
         selectedRoad = value;
@@ -296,7 +311,7 @@ else
                 .Select(road => new LookupOption(road.Id.ToString(), road.Name)).ToArray();
         return await AccidentFilterHelper.SearchAccidentsAsync(AccidentApi, filterRoadId, filterMonth, term, token);
     }
-    /*
+    //
         (await LookupApi.GetAccidentsAsync(new AccidentLookupQuery { SearchTerm = term, Take = 20 }, token))
             .Select(accident => new LookupOption(accident.Id.ToString(), $"{accident.RoadName} · {RmsUi.DateTime(accident.AccidentTimeUnix)}"))
             .ToArray();
