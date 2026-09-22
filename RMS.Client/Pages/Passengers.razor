@@ -32,36 +32,51 @@
 }
 else
 {
-    @if (parentCar is not null)
+    @if (!CarId.HasValue)
     {
-        <section class="entity-context-card">
-            <span class="entity-context-icon"><i class="bi bi-car-front"></i></span>
-            <div>
-                <small>خودروی انتخاب‌شده</small>
-                <strong>@parentCar.PlateNumber · @parentCar.CarName</strong>
-                <span>@RmsUi.CarClass(parentCar.CarClass) · حادثه ACC-@RmsUi.ShortId(parentCar.FkAccident)</span>
-            </div>
-            @if (CanListPeople)
+        <section class="panel-card access-denied-card image-route-guide">
+            <span><i class="bi bi-people"></i></span>
+            <h2>ابتدا خودرو را از یک حادثه انتخاب کنید</h2>
+            <p>رانندگان و سرنشینان به خودرو وابسته‌اند. برای مشاهده یا ثبت اطلاعات، از فهرست حوادث وارد خودروهای همان حادثه و سپس سرنشینان خودرو شوید.</p>
+            @if (CanListAccidents)
             {
-                <a class="btn btn-light app-button" href="@($"/accidents/{parentCar.FkAccident}/people")"><i class="bi bi-person-walking"></i> عابر</a>
+                <a class="btn btn-primary app-button" href="/accidents"><i class="bi bi-exclamation-octagon"></i> مشاهده حوادث</a>
             }
         </section>
     }
+    else
+    {
+        @if (parentCar is not null)
+        {
+            <section class="entity-context-card">
+                <span class="entity-context-icon"><i class="bi bi-car-front"></i></span>
+                <div>
+                    <small>خودروی انتخاب‌شده</small>
+                    <strong>@parentCar.PlateNumber · @parentCar.CarName</strong>
+                    <span>@RmsUi.CarClass(parentCar.CarClass) · حادثه ACC-@RmsUi.ShortId(parentCar.FkAccident)</span>
+                </div>
+                @if (CanListPeople)
+                {
+                    <a class="btn btn-light app-button" href="@($"/accidents/{parentCar.FkAccident}/people")"><i class="bi bi-person-walking"></i> افراد حادثه</a>
+                }
+            </section>
+        }
 
-    <EntityListPanel @key="CarId" @ref="listPanel" Columns="Columns" Rows="rows" IsLoading="isLoading"
-                     TotalCount="totalCount" ErrorMessage="@pageError" SuccessMessage="@successMessage"
-                     SearchPlaceholder="جست‌وجو با نام، کد ملی یا نقش..." QueryChanged="LoadPageAsync">
-        <RowActions Context="row">
-            @if (CanUpdate)
-            {
-                <button type="button" class="table-action" title="ویرایش راننده یا سرنشین" @onclick="() => OpenEditAsync(row)"><i class="bi bi-pencil-square"></i></button>
-            }
-            @if (CanDelete)
-            {
-                <button type="button" class="table-action danger" title="حذف راننده یا سرنشین" @onclick="() => AskDelete(row)"><i class="bi bi-trash3"></i></button>
-            }
-        </RowActions>
-    </EntityListPanel>
+        <EntityListPanel @key="CarId" @ref="listPanel" Columns="Columns" Rows="rows" IsLoading="isLoading"
+                         TotalCount="totalCount" ErrorMessage="@pageError" SuccessMessage="@successMessage"
+                         SearchPlaceholder="جست‌وجو با نام، کد ملی یا نقش..." QueryChanged="LoadPageAsync">
+            <RowActions Context="row">
+                @if (CanUpdate)
+                {
+                    <button type="button" class="table-action" title="ویرایش راننده یا سرنشین" @onclick="() => OpenEditAsync(row)"><i class="bi bi-pencil-square"></i></button>
+                }
+                @if (CanDelete)
+                {
+                    <button type="button" class="table-action danger" title="حذف راننده یا سرنشین" @onclick="() => AskDelete(row)"><i class="bi bi-trash3"></i></button>
+                }
+            </RowActions>
+        </EntityListPanel>
+    }
 }
 
 <AppModal IsOpen="modalOpen" Large="true" Title="@(editingRow is null ? "افزودن راننده یا سرنشین" : "ویرایش راننده یا سرنشین")"
@@ -179,12 +194,6 @@ else
 @code {
     [Parameter] public Guid? CarId { get; set; }
 
-    private static readonly EntityColumn[] allColumns =
-    [
-        new("NationalCode", "کد ملی"), new("Name", "نام و نام خانوادگی"), new("Role", "نقش"),
-        new("Car", "خودرو"), new("Gender", "جنسیت"), new("Injury", "آسیب")
-    ];
-
     private static readonly EntityColumn[] scopedColumns =
     [
         new("NationalCode", "کد ملی"), new("Name", "نام و نام خانوادگی"), new("Role", "نقش"),
@@ -208,7 +217,7 @@ else
     private string? deleteError;
     private string? successMessage;
 
-    private IReadOnlyList<EntityColumn> Columns => CarId.HasValue ? scopedColumns : allColumns;
+    private IReadOnlyList<EntityColumn> Columns => scopedColumns;
     private string PageTitleText => parentCar is not null
         ? $"سرنشینان {parentCar.PlateNumber}"
         : CarId.HasValue ? "رانندگان و سرنشینان خودرو" : "رانندگان و سرنشینان";
@@ -222,6 +231,7 @@ else
     private bool CanUpdate => AuthenticationState.HasPermission(UserSection.Passengers, UserAccessOperation.View)
         && AuthenticationState.HasPermission(UserSection.Passengers, UserAccessOperation.Update);
     private bool CanDelete => AuthenticationState.HasPermission(UserSection.Passengers, UserAccessOperation.Delete);
+    private bool CanListAccidents => AuthenticationState.HasPermission(UserSection.Accidents, UserAccessOperation.Report);
     private bool CanListPeople => AuthenticationState.HasPermission(UserSection.People, UserAccessOperation.Report);
 
     protected override async Task OnParametersSetAsync()
@@ -249,7 +259,13 @@ else
                 return;
             }
         }
-
+        else
+        {
+            rows.Clear();
+            totalCount = 0;
+            isLoading = false;
+            return;
+        }
         await LoadAsync();
     }
 
@@ -295,6 +311,13 @@ else
 
     private async Task LoadPageCoreAsync(EntityPageRequest request)
     {
+        if (!CarId.HasValue)
+        {
+            rows.Clear();
+            totalCount = 0;
+            return;
+        }
+
         var result = await PassengerApi.GetAllAsync(new PassengerQueries
         {
             CarId = CarId,
@@ -496,3 +519,6 @@ else
         _ => fallback
     };
 }
+
+
+

@@ -32,36 +32,51 @@
 }
 else
 {
-    @if (parentAccident is not null)
+    @if (!AccidentId.HasValue)
     {
-        <section class="entity-context-card">
-            <span class="entity-context-icon"><i class="bi bi-exclamation-octagon"></i></span>
-            <div>
-                <small>حادثه انتخاب‌شده</small>
-                <strong>ACC-@RmsUi.ShortId(parentAccident.Id)</strong>
-                <span>@RmsUi.DateTime(parentAccident.AccidentTimeUnix) · @RmsUi.AccidentType(parentAccident.AccidentType)</span>
-            </div>
-            @if (CanListCars)
+        <section class="panel-card access-denied-card image-route-guide">
+            <span><i class="bi bi-person-walking"></i></span>
+            <h2>ابتدا حادثه را انتخاب کنید</h2>
+            <p>افراد به حادثه وابسته‌اند. برای مشاهده یا ثبت فرد، از فهرست حوادث وارد افراد همان حادثه شوید.</p>
+            @if (CanListAccidents)
             {
-                <a class="btn btn-light app-button" href="@($"/accidents/{parentAccident.Id}/cars")"><i class="bi bi-car-front"></i> خودروهای حادثه</a>
+                <a class="btn btn-primary app-button" href="/accidents"><i class="bi bi-exclamation-octagon"></i> مشاهده حوادث</a>
             }
         </section>
     }
+    else
+    {
+        @if (parentAccident is not null)
+        {
+            <section class="entity-context-card">
+                <span class="entity-context-icon"><i class="bi bi-exclamation-octagon"></i></span>
+                <div>
+                    <small>حادثه انتخاب‌شده</small>
+                    <strong>ACC-@RmsUi.ShortId(parentAccident.Id)</strong>
+                    <span>@RmsUi.DateTime(parentAccident.AccidentTimeUnix) · @RmsUi.AccidentType(parentAccident.AccidentType)</span>
+                </div>
+                @if (CanListCars)
+                {
+                    <a class="btn btn-light app-button" href="@($"/accidents/{parentAccident.Id}/cars")"><i class="bi bi-car-front"></i> خودروهای حادثه</a>
+                }
+            </section>
+        }
 
-    <EntityListPanel @key="AccidentId" @ref="listPanel" Columns="Columns" Rows="rows" IsLoading="isLoading"
-                     TotalCount="totalCount" ErrorMessage="@pageError" SuccessMessage="@successMessage"
-                     SearchPlaceholder="جست‌وجو با نام یا کد ملی..." QueryChanged="LoadPageAsync">
-        <RowActions Context="row">
-            @if (CanUpdate)
-            {
-                <button type="button" class="table-action" title="ویرایش فرد" @onclick="() => OpenEditAsync(row)"><i class="bi bi-pencil-square"></i></button>
-            }
-            @if (CanDelete)
-            {
-                <button type="button" class="table-action danger" title="حذف فرد" @onclick="() => AskDelete(row)"><i class="bi bi-trash3"></i></button>
-            }
-        </RowActions>
-    </EntityListPanel>
+        <EntityListPanel @key="AccidentId" @ref="listPanel" Columns="Columns" Rows="rows" IsLoading="isLoading"
+                         TotalCount="totalCount" ErrorMessage="@pageError" SuccessMessage="@successMessage"
+                         SearchPlaceholder="جست‌وجو با نام یا کد ملی..." QueryChanged="LoadPageAsync">
+            <RowActions Context="row">
+                @if (CanUpdate)
+                {
+                    <button type="button" class="table-action" title="ویرایش فرد" @onclick="() => OpenEditAsync(row)"><i class="bi bi-pencil-square"></i></button>
+                }
+                @if (CanDelete)
+                {
+                    <button type="button" class="table-action danger" title="حذف فرد" @onclick="() => AskDelete(row)"><i class="bi bi-trash3"></i></button>
+                }
+            </RowActions>
+        </EntityListPanel>
+    }
 }
 
 <AppModal IsOpen="modalOpen" Large="true" Title="@(editingRow is null ? "افزودن فرد" : "ویرایش فرد")"
@@ -171,12 +186,6 @@ else
 @code {
     [Parameter] public Guid? AccidentId { get; set; }
 
-    private static readonly EntityColumn[] allColumns =
-    [
-        new("NationalCode", "کد ملی"), new("Name", "نام و نام خانوادگی"), new("Gender", "جنسیت"),
-        new("Age", "سن"), new("Accident", "حادثه مرتبط"), new("Injury", "آسیب")
-    ];
-
     private static readonly EntityColumn[] scopedColumns =
     [
         new("NationalCode", "کد ملی"), new("Name", "نام و نام خانوادگی"), new("Gender", "جنسیت"),
@@ -200,11 +209,11 @@ else
     private string? deleteError;
     private string? successMessage;
 
-    private IReadOnlyList<EntityColumn> Columns => AccidentId.HasValue ? scopedColumns : allColumns;
-    private string PageTitleText => AccidentId.HasValue ? $"افراد حادثه ACC-{RmsUi.ShortId(AccidentId.Value)}" : "عابر";
+    private IReadOnlyList<EntityColumn> Columns => scopedColumns;
+    private string PageTitleText => AccidentId.HasValue ? $"افراد حادثه ACC-{RmsUi.ShortId(AccidentId.Value)}" : "انتخاب حادثه برای افراد";
     private string PageDescription => AccidentId.HasValue
         ? "ثبت عابر و سایر افراد همین حادثه؛ شناسه حادثه به‌صورت خودکار اعمال می‌شود."
-        : "فهرست همه عابر؛ برای ثبت فرد از صفحه حادثه وارد شوید.";
+        : "برای مشاهده یا ثبت فرد، ابتدا از فهرست حوادث یک حادثه را انتخاب کنید.";
 
     private bool CanList => AuthenticationState.HasPermission(UserSection.People, UserAccessOperation.Report);
     private bool CanCreate => AuthenticationState.HasPermission(UserSection.People, UserAccessOperation.Create);
@@ -212,6 +221,7 @@ else
     private bool CanUpdate => AuthenticationState.HasPermission(UserSection.People, UserAccessOperation.View)
         && AuthenticationState.HasPermission(UserSection.People, UserAccessOperation.Update);
     private bool CanDelete => AuthenticationState.HasPermission(UserSection.People, UserAccessOperation.Delete);
+    private bool CanListAccidents => AuthenticationState.HasPermission(UserSection.Accidents, UserAccessOperation.Report);
     private bool CanListCars => AuthenticationState.HasPermission(UserSection.Cars, UserAccessOperation.Report);
 
     protected override async Task OnParametersSetAsync()
@@ -238,6 +248,13 @@ else
                 totalCount = 0;
                 return;
             }
+        }
+        else
+        {
+            rows.Clear();
+            totalCount = 0;
+            isLoading = false;
+            return;
         }
 
         await LoadAsync();
@@ -285,9 +302,16 @@ else
 
     private async Task LoadPageCoreAsync(EntityPageRequest request)
     {
+        if (!AccidentId.HasValue)
+        {
+            rows.Clear();
+            totalCount = 0;
+            return;
+        }
+
         var result = await PeopleApi.GetAllAsync(new PeopleQueries
         {
-            AccidentId = AccidentId,
+            AccidentId = AccidentId.Value,
             Skip = request.Skip,
             Take = request.Take,
             SearchTerm = request.SearchTerm
