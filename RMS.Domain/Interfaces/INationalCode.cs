@@ -1,4 +1,7 @@
-﻿namespace RMS.Domain.Interfaces;
+﻿using RMS.Shared.Contracts.Queries;
+using RMS.Shared.Contracts.Responses;
+
+namespace RMS.Domain.Interfaces;
 
 
 /// <summary>
@@ -29,4 +32,6 @@ public interface INationalCode
     /// <returns><see langword="true"/> در صورت وجود کد ملی در رکوردی دیگر؛ در غیر این صورت <see langword="false"/>.</returns>
     Task<bool> DuplicateNationalCodeEditAsync(string nationalCode, Guid fkId, Guid id, bool peoplOrPass, CancellationToken token = default);
 
+
+  
 }

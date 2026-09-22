@@ -9,6 +9,105 @@ namespace RMS.Infrastructure.Persistence.EF.Repository;
 
 public sealed class AnalyticsRepository(RmsDbContext db) : IAnalyticsRepository
 {
+    /// <inheritdoc/>
+    public async Task<PagedResponse<HumanItemResponse>> GetAllHumanAsync(HumanQueries argo, CancellationToken token = default)
+    {
+
+        List<HumanItemResponse> itemHuman = [];
+        int humanCount;
+        // در صورتی که فیلتر راننده وارد شده  عملا بی فایده است و فقط در خودرو جستجو می کنم 
+        if (!argo.IsDriver.HasValue)
+        {
+            #region People
+            var sourcePeople = db.PeopleDs.AsNoTracking();
+            if (!string.IsNullOrWhiteSpace(argo.NationalCode))
+                sourcePeople = sourcePeople.Where(person => person.NationalCode.Contains(argo.NationalCode.Trim()));
+            if (argo.DamageType.HasValue)
+                sourcePeople = sourcePeople.Where(person => person.TypePersonDamage == argo.DamageType.Value);
+            var totalCountPeople = await sourcePeople.CountAsync(token);
+            humanCount = +totalCountPeople;
+            var rawItemsPeople = await sourcePeople
+                .OrderBy(person => person.NationalCode)
+                .Skip(argo.Skip)
+                .Take(argo.Take)
+                .Select(person => new
+                {
+                    person.Id,
+                    AccidentId = person.FkAccident,
+                    person.NationalCode,
+                    FullName = person.PassengerFullName,
+                    person.Gender,
+                    person.Age,
+                    person.InjuryPercentage,
+                    DamageType = person.TypePersonDamage
+                })
+                .ToListAsync(token);
+            var itemsPeople = rawItemsPeople.Select(person => new HumanItemResponse(
+                    person.Id,
+                    person.AccidentId,
+                    AccidentCode(person.AccidentId),
+                    person.NationalCode,
+                    person.FullName,
+                    person.Gender,
+                    person.Age,
+                    person.InjuryPercentage,
+                    person.DamageType,
+                    false))
+                .ToList();
+
+            itemHuman.AddRange(itemsPeople);
+            #endregion
+
+        }
+
+        #region Passenger
+
+        var sourcePassenger = db.PassengerDs.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(argo.NationalCode))
+            sourcePassenger = sourcePassenger.Where(person => person.NationalCode.Contains(argo.NationalCode.Trim()));
+        if (argo.DamageType.HasValue)
+            sourcePassenger = sourcePassenger.Where(person => person.TypePersonDamage == argo.DamageType.Value);
+        if (argo.IsDriver.HasValue)
+            sourcePassenger = sourcePassenger.Where(passenger => passenger.IsDriver == argo.IsDriver.Value);
+        var totalCountPassenger = await sourcePassenger.CountAsync(token);
+        humanCount = +totalCountPassenger;
+        var rawItemsPassenger = await sourcePassenger
+            .OrderBy(person => person.NationalCode)
+            .Skip(argo.Skip)
+            .Take(argo.Take)
+            .Select(person => new
+            {
+                person.Id,
+                AccidentId = person.Car.FkAccident,
+                person.NationalCode,
+                FullName = person.PassengerFullName,
+                person.Gender,
+                person.Age,
+                person.InjuryPercentage,
+                DamageType = person.TypePersonDamage
+            })
+            .ToListAsync(token);
+        var itemsPassenger = rawItemsPassenger.Select(person => new HumanItemResponse(
+                person.Id,
+                person.AccidentId,
+                AccidentCode(person.AccidentId),
+                person.NationalCode,
+                person.FullName,
+                person.Gender,
+                person.Age,
+                person.InjuryPercentage,
+                person.DamageType,
+                true))
+            .ToList();
+
+        itemHuman.AddRange(itemsPassenger);
+        #endregion
+
+
+        return new PagedResponse<HumanItemResponse>(itemHuman, humanCount, argo.Skip, argo.Take);
+    }
+
+    private static string AccidentCode(Guid id) => $"ACC-{id.ToString("N")[..8].ToUpperInvariant()}";
     public async Task<DashboardOverviewResponse> GetDashboardAsync(
         DashboardQuery query,
         CancellationToken token = default)

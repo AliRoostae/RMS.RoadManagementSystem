@@ -103,6 +103,18 @@ public sealed record PeopleListItemResponse(
     byte InjuryPercentage,
     DamageTypePersonEnum DamageType);
 
+public sealed record HumanItemResponse(
+    Guid Id,
+    Guid AccidentId,
+    string AccidentCode,
+    string NationalCode,
+    string FullName,
+    GenderEnums Gender,
+    byte Age,
+    byte InjuryPercentage,
+    DamageTypePersonEnum DamageType,
+    bool IsPassenger);
+
 public sealed record PassengerListItemResponse(
     Guid Id,
     Guid CarId,

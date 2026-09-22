@@ -21,4 +21,11 @@ public interface IAnalyticsService
     Task<AccidentReportResponse> GetAccidentReportAsync(
         AccidentReportQuery query,
         CancellationToken token = default);
+
+    /// <summary>فهرست صفحه‌بندی‌شدهٔ عابرو سرنشین را دریافت می‌کند.</summary>
+    /// <param name="argo">معیارهای جست‌وجو و صفحه‌بندی.</param>
+    /// <param name="token">توکن لغو عملیات.</param>
+    /// <returns>فهرست اشخاص منطبق با معیارها.</returns>
+    Task<PagedResponse<HumanItemResponse>> GetAllHumanAsync(HumanQueries argo, CancellationToken token = default);
+
 }

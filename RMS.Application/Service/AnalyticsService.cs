@@ -34,4 +34,9 @@ public sealed class AnalyticsService(IAnalyticsRepository repository) : IAnalyti
         if (endTime <= startTime)
             throw new ValidationException("پایان بازه باید بعد از شروع بازه باشد.");
     }
+
+    public Task<PagedResponse<HumanItemResponse>> GetAllHumanAsync(HumanQueries argo, CancellationToken token = default)
+        => repository.GetAllHumanAsync(argo,token);
+
+  
 }

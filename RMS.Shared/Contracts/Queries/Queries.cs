@@ -77,6 +77,13 @@ public sealed class PeopleQueries : BaseQueries
     public DamageTypePersonEnum? DamageType { get; set; }
 }
 
+public sealed class HumanQueries : BaseQueries
+{
+    public string? NationalCode { get; set; }
+    public bool? IsDriver { get; set; }
+    public DamageTypePersonEnum? DamageType { get; set; }
+}
+
 public sealed class PassengerQueries : BaseQueries
 {
     public Guid? CarId { get; set; }

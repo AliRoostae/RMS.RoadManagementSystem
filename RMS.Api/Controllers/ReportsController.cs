@@ -17,4 +17,15 @@ public sealed class ReportsController(IAnalyticsService service) : ControllerBas
         [FromQuery] AccidentReportQuery query,
         CancellationToken token) =>
         Ok(await service.GetAccidentReportAsync(query, token));
+
+    [HttpGet("humans")]
+    [HasPermission(UserSection.Reports, UserAccessOperation.Report)]
+    public async Task<ActionResult<PagedResponse<HumanItemResponse>>> GetAllHuman(
+       [FromQuery] HumanQueries query,
+       CancellationToken token) =>
+       Ok(await service.GetAllHumanAsync(query, token));
+
+
+
+
 }
