@@ -2,34 +2,47 @@ name: Build and release
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'New version (for example v1.2.0)'
-        required: true
-        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: release-${{ inputs.version }}
+  group: release-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   validate:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v7
-      - name: Check version and tag
-        env:
-          VERSION: ${{ inputs.version }}
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Calculate version
+        id: version
+        shell: bash
         run: |
-          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-            echo 'Use a version like v1.2.0 or v1.2.0-rc.1.' >&2
-            exit 1
+          git fetch --tags --force
+
+          latest=$(git tag --list 'v*' --sort=-version:refname | head -n 1)
+
+          if [ -z "$latest" ]; then
+            version="v1.0.0"
+          else
+            number="${latest#v}"
+            IFS='.' read -r major minor patch <<< "$number"
+            patch="${patch%%-*}"
+            patch=$((patch + 1))
+            version="v${major}.${minor}.${patch}"
           fi
-          if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null; then
-            echo "The tag $VERSION already exists. Choose a new version." >&2
+
+          echo "VERSION: $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$version" >/dev/null; then
+            echo "The tag $version already exists." >&2
             exit 1
           fi
 
@@ -61,7 +74,7 @@ jobs:
       - name: Publish API
         shell: pwsh
         env:
-          VERSION: ${{ inputs.version }}
+          VERSION: ${{ needs.validate.outputs.version }}
           RID: ${{ matrix.rid }}
         run: |
           $output = Join-Path $env:RUNNER_TEMP 'api-publish'
@@ -74,13 +87,13 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.rid }}
-          path: ${{ runner.temp }}/RMS-Api-${{ matrix.rid }}-${{ inputs.version }}.zip
+          path: ${{ runner.temp }}/RMS-Api-${{ matrix.rid }}-${{ needs.validate.outputs.version }}.zip
           if-no-files-found: error
       - name: Publish Client
         if: matrix.rid == 'linux-x64'
         shell: pwsh
         env:
-          VERSION: ${{ inputs.version }}
+          VERSION: ${{ needs.validate.outputs.version }}
         run: |
           $output = Join-Path $env:RUNNER_TEMP 'client-publish'
           $archive = Join-Path $env:RUNNER_TEMP "RMS-Client-$env:VERSION.zip"
@@ -98,7 +111,7 @@ jobs:
         if: matrix.rid == 'linux-x64'
         with:
           name: release-client
-          path: ${{ runner.temp }}/RMS-Client-${{ inputs.version }}.zip
+          path: ${{ runner.temp }}/RMS-Client-${{ needs.validate.outputs.version }}.zip
           if-no-files-found: error
 
   docker:
@@ -124,7 +137,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          VERSION: ${{ inputs.version }}
+          VERSION: ${{ needs.validate.outputs.version }}
         run: |
           for file in "RMS-Api-win-x64-$VERSION.zip" "RMS-Api-linux-x64-$VERSION.zip" "RMS-Client-$VERSION.zip"; do
             test -s "dist/$file"
