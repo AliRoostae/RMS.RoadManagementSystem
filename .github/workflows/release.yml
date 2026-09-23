@@ -1,0 +1,136 @@
+name: Build and release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'New version (for example v1.2.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check version and tag
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo 'Use a version like v1.2.0 or v1.2.0-rc.1.' >&2
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null; then
+            echo "The tag $VERSION already exists. Choose a new version." >&2
+            exit 1
+          fi
+
+  publish:
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: windows-latest
+            rid: win-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build and test solution
+        shell: pwsh
+        run: |
+          dotnet restore RMS.RoadManagementSystem.slnx
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet build RMS.RoadManagementSystem.slnx --configuration Release --no-restore
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet test RMS.RoadManagementSystem.slnx --configuration Release --no-build --no-restore
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Publish API
+        shell: pwsh
+        env:
+          VERSION: ${{ inputs.version }}
+          RID: ${{ matrix.rid }}
+        run: |
+          $output = Join-Path $env:RUNNER_TEMP 'api-publish'
+          $archive = Join-Path $env:RUNNER_TEMP "RMS-Api-$env:RID-$env:VERSION.zip"
+          $assemblyVersion = $env:VERSION.Substring(1)
+          dotnet publish RMS.Api/RMS.Api.csproj --configuration Release --runtime $env:RID --self-contained false -p:UseAppHost=false -p:Version=$assemblyVersion --output $output
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Remove-Item (Join-Path $output 'appsettings.Development.json') -ErrorAction SilentlyContinue
+          Compress-Archive -Path (Join-Path $output '*') -DestinationPath $archive
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.rid }}
+          path: ${{ runner.temp }}/RMS-Api-${{ matrix.rid }}-${{ inputs.version }}.zip
+          if-no-files-found: error
+      - name: Publish Client
+        if: matrix.rid == 'linux-x64'
+        shell: pwsh
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          $output = Join-Path $env:RUNNER_TEMP 'client-publish'
+          $archive = Join-Path $env:RUNNER_TEMP "RMS-Client-$env:VERSION.zip"
+          $assemblyVersion = $env:VERSION.Substring(1)
+          dotnet publish RMS.Client/RMS.Client.csproj --configuration Release -p:Version=$assemblyVersion --output $output
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $webRoot = Join-Path $output 'wwwroot'
+          if (-not (Test-Path (Join-Path $webRoot 'index.html'))) { throw 'Client publish is missing wwwroot/index.html.' }
+          $configuration = Join-Path $webRoot 'appsettings.json'
+          $settings = Get-Content $configuration -Raw | ConvertFrom-Json
+          $settings.ApiBaseUrl = 'https://api.example.com/'
+          $settings | ConvertTo-Json -Depth 10 | Set-Content $configuration -Encoding utf8
+          Compress-Archive -Path (Join-Path $webRoot '*') -DestinationPath $archive
+      - uses: actions/upload-artifact@v4
+        if: matrix.rid == 'linux-x64'
+        with:
+          name: release-client
+          path: ${{ runner.temp }}/RMS-Client-${{ inputs.version }}.zip
+          if-no-files-found: error
+
+  docker:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build and test in Docker
+        run: docker build --target test --tag rms-build-test:${{ github.run_id }} .
+
+  release:
+    needs: [publish, docker]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+      - name: Create versioned GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          for file in "RMS-Api-win-x64-$VERSION.zip" "RMS-Api-linux-x64-$VERSION.zip" "RMS-Client-$VERSION.zip"; do
+            test -s "dist/$file"
+          done
+          gh release create "$VERSION" dist/*.zip \
+            --target "$GITHUB_SHA" \
+            --title "$VERSION" \
+            --generate-notes \
+            --notes 'API: set ConnectionStrings__DefaultConnection and Jwt__Key before running. Client: edit appsettings.json and replace ApiBaseUrl with your API address. Docker is checked by a build; no runtime image is published.'
