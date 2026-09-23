@@ -1,0 +1,12 @@
+.git/
+.github/
+.vs/
+**/bin/
+**/obj/
+**/TestResults/
+packages/
+docs/
+*.user
+*.suo
+*.binlog
+README.md
