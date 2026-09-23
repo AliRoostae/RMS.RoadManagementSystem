@@ -84,13 +84,6 @@
     border:2px solid #4f46e5;
     background:rgba(79,70,229,.15)
 }
-.legend-accident {
-    width:8px;
-    height:8px;
-    border-radius:50%;
-    background:#ef4444;
-    box-shadow:0 0 0 3px rgba(239,68,68,.18)
-}
 .road-list-panel  {
     padding:18px;
     min-height:580px
@@ -331,12 +324,14 @@
     cursor:pointer
 }
 .report-filter {
-    display:grid;
-    grid-template-columns:repeat(3,minmax(0,1fr)) auto;
-    align-items:end;
-    gap:14px;
-    margin-bottom:20px;
-    padding:16px
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(max-content, 1fr));
+    align-items: self-end;
+    gap: 14px;
+    margin-bottom: 20px;
+    padding: 20px;
+    width: 100%;
+    box-sizing: border-box;
 }
 .report-grid {
     display:grid;
@@ -1451,3 +1446,5 @@
 .image-viewer-nav.next {
     left:16px
 }
+
+.accident-report-map { min-height: 560px; border-radius: 14px; overflow: hidden; }

@@ -43,6 +43,6 @@ public sealed class NationalCodeRepository
             }).AnyAsync(p => p.people || p.passenger, token);
     }
 
- 
+
 
 }

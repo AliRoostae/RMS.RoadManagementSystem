@@ -49,6 +49,11 @@
         <NavLink href="/reports/cars" class="nav-item nav-item-child" @onclick="HandleNavigate"><i class="bi bi-car-front"></i><span>گزارش خودروها</span></NavLink>
         <NavLink href="/reports/humans" class="nav-item nav-item-child" @onclick="HandleNavigate"><i class="bi bi-people"></i><span>گزارش افراد</span></NavLink>
         }
+        @if (HasReportAccess(UserSection.Accidents))
+        {
+        <NavLink href="/reports/accidents" class="nav-item nav-item-child" @onclick="HandleNavigate"><i class="bi bi-list-columns-reverse"></i><span>گزارش حوادث</span></NavLink>
+        <NavLink href="/reports/accidents/map" class="nav-item nav-item-child" @onclick="HandleNavigate"><i class="bi bi-geo-alt"></i><span>نقشه حوادث</span></NavLink>
+        }
     }
     @if (CanAccess(UserSection.Users))
     {

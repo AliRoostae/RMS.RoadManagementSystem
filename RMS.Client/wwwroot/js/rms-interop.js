@@ -4,6 +4,7 @@
         "js/rms-interop-core.js",
         "js/rms-interop-charts.js",
         "js/rms-interop-roads.js",
+        "js/rms-interop-reports.js",
         "js/rms-interop-accidents.js",
         "js/rms-auth-storage.js"
     ];

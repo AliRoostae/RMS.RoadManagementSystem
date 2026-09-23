@@ -2,8 +2,8 @@
 window.rmsInterop = window.rmsInterop || {};
 
 Object.assign(window.rmsInterop, {
-/* نقشه‌ی راه‌ها و نقاط حادثه را نمایش می‌دهد. */
-    renderRoadMap: function (elementId, roads, accidents) {
+/* نقشه‌ی راه‌ها را نمایش می‌دهد. */
+    renderRoadMap: function (elementId, roads) {
             if (!window.L) return;
             const element = document.getElementById(elementId);
             if (!element) return;
@@ -29,15 +29,6 @@ Object.assign(window.rmsInterop, {
                 roadLayers.set(String(road.id).toLowerCase(), layer);
                 paths.flat().forEach(point => bounds.push(point));
             });
-
-            (accidents || []).forEach((accident) => {
-                const icon = L.divIcon({ className: "", html: '<div class="rms-map-marker"></div>', iconSize: [22, 22], iconAnchor: [11, 20] });
-                const point = [accident.latitude, accident.longitude];
-                L.marker(point, { icon }).addTo(roadMap)
-                    .bindPopup(`<strong>${escapeHtml(accident.title)}</strong><br>${escapeHtml(accident.date)}`);
-                bounds.push(point);
-            });
-
             if (bounds.length) roadMap.fitBounds(bounds, { padding: [28, 28], maxZoom: 13 });
             setTimeout(() => roadMap && roadMap.invalidateSize(), 150);
         },

@@ -33,5 +33,5 @@ public interface INationalCode
     Task<bool> DuplicateNationalCodeEditAsync(string nationalCode, Guid fkId, Guid id, bool peoplOrPass, CancellationToken token = default);
 
 
-  
+
 }

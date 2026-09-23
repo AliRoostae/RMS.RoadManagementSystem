@@ -1,0 +1,76 @@
+@page "/reports/accidents"
+@attribute [Authorize]
+@using System.Globalization
+@inject AccidentApiService AccidentApi
+@inject LookupApiService LookupApi
+@inject RmsAuthenticationStateProvider AuthenticationState
+
+<PageTitle>گزارش حوادث | راه‌بان کیان</PageTitle>
+
+<PageHeader Title="گزارش حوادث" Eyebrow="گزارش‌ها" Description="فهرست حوادث بین دو تاریخ با همه فیلترهای AccidentQuery">
+    <Actions><a class="btn btn-light app-button" href="/reports"><i class="bi bi-arrow-right"></i> بازگشت به گزارش‌ها</a></Actions>
+</PageHeader>
+
+@if (!CanAccess)
+{
+    <section class="panel-card access-denied-card"><span><i class="bi bi-shield-lock"></i></span><h2>دسترسی به گزارش حوادث مجاز نیست</h2></section>
+}
+else
+{
+    <section class="panel-card report-filter">
+        <div class="form-group"><label>تاریخ شروع</label><DatePickerZO SelectDate="@startDate" SelectDateChanged="value => startDate = value ?? startDate" PopupDatePickerZO="true" Format="yyyy/MM/dd" /></div>
+        <div class="form-group"><label>تاریخ پایان</label><DatePickerZO SelectDate="@endDate" SelectDateChanged="value => endDate = value ?? endDate" PopupDatePickerZO="true" Format="yyyy/MM/dd" /></div>
+        <div class="form-group"><label>راه</label><AsyncLookup Value="@selectedRoad" ValueChanged="value => selectedRoad = value" SearchAsync="SearchRoadsAsync" Placeholder="نام راه را جست‌وجو کنید..." /></div>
+        <div class="form-group"><label>نوع حادثه</label><select @bind="selectedType"><option value="">همه انواع</option>@foreach (var value in Enum.GetValues<AccidentTypeEnums>()) { <option value="@Convert.ToByte(value)">@RmsUi.AccidentType(value)</option> }</select></div>
+        <div class="form-group"><label>آب‌وهوا</label><select @bind="selectedWeather"><option value="">همه وضعیت‌ها</option>@foreach (var value in Enum.GetValues<WeatherConditionEnums>()) { <option value="@Convert.ToByte(value)">@RmsUi.Weather(value)</option> }</select></div>
+        <div class="form-group"><label>علت حادثه</label><select @bind="selectedCause"><option value="">همه علت‌ها</option>@foreach (var value in Enum.GetValues<AccidentCauseEnums>()) { <option value="@Convert.ToByte(value)">@RmsUi.AccidentCause(value)</option> }</select></div>
+        <div class="form-group"><label>جست‌وجو</label><input @bind="searchTerm" placeholder="شناسه یا عبارت جست‌وجو..." /></div>
+        <div class="report-filter-actions"><button class="btn btn-primary app-button" type="button" @onclick="SearchAsync" disabled="@isLoading"><i class="bi bi-search"></i> جست‌وجو</button></div>
+    </section>
+
+    @if (!string.IsNullOrWhiteSpace(pageError)) { <div class="app-alert danger"><i class="bi bi-exclamation-circle"></i><span>@pageError</span></div> }
+    <section class="panel-card car-report-panel">
+        <div class="panel-heading"><div><h2>فهرست حوادث</h2><p>@Persian(totalCount) رکورد</p></div></div>
+        @if (isLoading) { <div class="table-loading"><span class="spinner-border spinner-border-sm"></span> در حال دریافت گزارش...</div> }
+        else if (rows.Count == 0) { <div class="empty-inline"><i class="bi bi-inbox"></i> رکوردی پیدا نشد.</div> }
+        else
+        {
+            <div class="table-responsive"><table class="app-table"><thead><tr><th>ردیف</th><th>تاریخ</th><th>راه</th><th>نوع</th><th>آب‌وهوا</th><th>افراد</th><th>آسیب</th><th>جزئیات</th></tr></thead><tbody>
+            @for (var index = 0; index < rows.Count; index++)
+            {
+                var row = rows[index];
+                <tr><td class="index-cell">@Persian((pageIndex * PageSize) + index + 1)</td><td>@RmsUi.DateTime(row.AccidentTimeUnix)</td><td>@row.RoadName</td><td>@RmsUi.AccidentType(row.AccidentType)</td><td>@RmsUi.Weather(row.Weather)</td><td>@Persian(row.PeopleCount)</td><td>@Persian(row.InjuryPercentage)٪</td><td><button type="button" class="table-action related" title="نمایش جزئیات" @onclick="() => ToggleDetailsAsync(row.Id)"><i class="bi @(expandedRows.Contains(row.Id) ? "bi-chevron-up" : "bi-chevron-down")"></i></button></td></tr>
+                @if (expandedRows.Contains(row.Id) && details.TryGetValue(row.Id, out var detail))
+                {
+                    <tr class="car-report-detail-row"><td colspan="8"><div class="car-report-detail-grid"><div><small>شناسه</small><strong>ACC-@RmsUi.ShortId(row.Id)</strong></div><div><small>مختصات</small><strong dir="ltr">@detail?.Latitude.ToString("0.000000", CultureInfo.InvariantCulture), @detail?.Longitude.ToString("0.000000", CultureInfo.InvariantCulture)</strong></div><div><small>وضعیت راه</small><strong>@RmsUi.RoadCondition(detail?.RoadCondition ?? RoadConditionEnums.Unknown)</strong></div><div><small>روشنایی</small><strong>@RmsUi.Lighting(detail?.LightingCondition ?? LightingConditionEnums.Unknown)</strong></div><div><small>علت</small><strong>@RmsUi.AccidentCause(detail?.AccidentCause ?? AccidentCauseEnums.Unknown)</strong></div><div><small>خسارت خودرو</small><strong>@Persian(detail?.DamagePercentageCar ?? 0)٪</strong></div></div></td></tr>
+                }
+            }
+            </tbody></table></div>
+            <div class="panel-pagination"><span>نمایش @Persian(rows.Count) رکورد از @Persian(totalCount)</span><div class="pagination-buttons"><button type="button" disabled="@(pageIndex == 0 || isLoading)" @onclick="PreviousPageAsync"><i class="bi bi-chevron-right"></i></button><button type="button" class="active">@Persian(pageIndex + 1)</button><button type="button" disabled="@(pageIndex >= PageCount - 1 || isLoading)" @onclick="NextPageAsync"><i class="bi bi-chevron-left"></i></button></div></div>
+        }
+    </section>
+}
+
+@code {
+    private const int PageSize = 25;
+    private readonly List<AccidentListItemResponse> rows = [];
+    private readonly Dictionary<Guid, AccidentResponse?> details = [];
+    private readonly HashSet<Guid> expandedRows = [];
+    private DateTime startDate = DateTime.Today.AddMonths(-1);
+    private DateTime endDate = DateTime.Today;
+    private string selectedRoad = string.Empty, selectedType = string.Empty, selectedWeather = string.Empty, selectedCause = string.Empty, searchTerm = string.Empty;
+    private int pageIndex, totalCount; private bool isLoading; private string? pageError;
+    private bool CanAccess => AuthenticationState.HasPermission(UserSection.Accidents, UserAccessOperation.Report);
+    private int PageCount => Math.Max(1, (int)Math.Ceiling(totalCount / (double)PageSize));
+    protected override async Task OnInitializedAsync() { if (CanAccess) await SearchAsync(); }
+    private async Task SearchAsync() { pageIndex = 0; await LoadAsync(); }
+    private async Task LoadAsync() { isLoading = true; pageError = null; try { var result = await AccidentApi.GetAllAsync(BuildQuery()); rows.Clear(); rows.AddRange(result.Items); totalCount = result.TotalCount; expandedRows.Clear(); details.Clear(); } catch (Exception ex) when (ex is ApiClientException or HttpRequestException) { pageError = ex is ApiClientException api ? api.Message : "ارتباط با RMS.Api برقرار نشد."; } finally { isLoading = false; } }
+    private AccidentQuery BuildQuery() => new() { StartTime = StartUnix, EndTime = EndUnix, Skip = pageIndex * PageSize, Take = PageSize, RoadId = Guid.TryParse(selectedRoad, out var road) ? road : null, AccidentType = byte.TryParse(selectedType, out var type) ? (AccidentTypeEnums)type : null, Weather = byte.TryParse(selectedWeather, out var weather) ? (WeatherConditionEnums)weather : null, Cause = byte.TryParse(selectedCause, out var cause) ? (AccidentCauseEnums)cause : null, SearchTerm = searchTerm };
+    private long StartUnix => new DateTimeOffset(startDate.Date, TimeZoneInfo.Local.GetUtcOffset(startDate.Date)).ToUnixTimeSeconds();
+    private long EndUnix => new DateTimeOffset(endDate.Date.AddDays(1).AddSeconds(-1), TimeZoneInfo.Local.GetUtcOffset(endDate.Date)).ToUnixTimeSeconds();
+    private async Task ToggleDetailsAsync(Guid id) { if (expandedRows.Remove(id)) return; expandedRows.Add(id); if (!details.ContainsKey(id)) { try { details[id] = await AccidentApi.GetByIdAsync(id); } catch (Exception ex) when (ex is ApiClientException or HttpRequestException) { pageError = ex is ApiClientException api ? api.Message : "دریافت جزئیات حادثه ناموفق بود."; } } }
+    private Task PreviousPageAsync() { if (pageIndex > 0) { pageIndex--; return LoadAsync(); } return Task.CompletedTask; }
+    private Task NextPageAsync() { if (pageIndex < PageCount - 1) { pageIndex++; return LoadAsync(); } return Task.CompletedTask; }
+    private async Task<IReadOnlyList<LookupOption>> SearchRoadsAsync(string term, CancellationToken token) => (await LookupApi.GetRoadsAsync(new LookupQuery { SearchTerm = term, Take = 20 }, token)).Select(road => new LookupOption(road.Id.ToString(), road.Name)).ToArray();
+    private static string Persian(int value) => value.ToString("N0").TranslateDigits();
+}

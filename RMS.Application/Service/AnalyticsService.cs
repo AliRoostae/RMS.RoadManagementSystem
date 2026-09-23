@@ -36,7 +36,7 @@ public sealed class AnalyticsService(IAnalyticsRepository repository) : IAnalyti
     }
 
     public Task<PagedResponse<HumanItemResponse>> GetAllHumanAsync(HumanQueries argo, CancellationToken token = default)
-        => repository.GetAllHumanAsync(argo,token);
+        => repository.GetAllHumanAsync(argo, token);
 
-  
+
 }

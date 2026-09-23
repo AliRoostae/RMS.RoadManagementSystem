@@ -4,7 +4,6 @@
 @using System.Text.Json
 @inject IJSRuntime JS
 @inject RoadApiService RoadApi
-@inject AccidentApiService AccidentApi
 @inject OpenStreetMapSearchService OsmSearch
 @inject OpenStreetMapRoutingService OsmRouting
 @inject RmsAuthenticationStateProvider AuthenticationState
@@ -49,7 +48,7 @@ else
                 <div class="map-tools"><button type="button" title="تازه‌سازی" @onclick="LoadAsync"><i class="bi bi-arrow-clockwise"></i></button></div>
             </div>
             <div id="road-map" class="road-map"></div>
-            <div class="map-legend"><span><i class="legend-area"></i> مسیر ثبت‌شده</span><span><i class="legend-accident"></i> حادثه ثبت‌شده</span></div>
+            <div class="map-legend"><span><i class="legend-area"></i> مسیر ثبت‌شده</span></div>
         </article>
 
         <aside class="panel-card road-list-panel">
@@ -101,7 +100,6 @@ else
     <section class="stats-grid compact-stats">
         <StatCard Label="کل مسیرها" Value="@totalRoadCount.ToString().TranslateDigits()" Icon="bi-signpost-split" Tone="primary" Hint="TotalCount مستقل از صفحه‌بندی" />
         <StatCard Label="مسیرهای دارای حادثه" Value="@RoadsWithAccidents.ToString().TranslateDigits()" Icon="bi-exclamation-triangle" Tone="danger" />
-        <StatCard Label="حوادث قابل مشاهده" Value="@accidents.Count.ToString().TranslateDigits()" Icon="bi-activity" Tone="warning" />
         <StatCard Label="نقطه مرجع در صفحه" Value="@roads.Count(road => road.HasCentroid).ToString().TranslateDigits()" Icon="bi-geo-alt" Tone="success" />
     </section>
 }
@@ -268,7 +266,6 @@ else
     private const int RoadPageSize = 20;
     private readonly List<RoadListItemResponse> roads = [];
     private readonly List<RoadMapItemResponse> mapRoads = [];
-    private readonly List<AccidentMapPointResponse> accidents = [];
     private string searchTerm = string.Empty;
     private int roadPageIndex;
     private int totalRoadCount;
@@ -316,7 +313,6 @@ else
     private bool CanCreate => AuthenticationState.HasPermission(UserSection.Roads, UserAccessOperation.Create);
     private bool CanUpdate => CanView && AuthenticationState.HasPermission(UserSection.Roads, UserAccessOperation.Update);
     private bool CanDelete => AuthenticationState.HasPermission(UserSection.Roads, UserAccessOperation.Delete);
-    private bool CanListAccidents => AuthenticationState.HasPermission(UserSection.Accidents, UserAccessOperation.Report);
     private bool CanCalculateRoute => routeSelectionKind.HasValue &&
                                       routeSelectionStart is not null &&
                                       routeSelectionEnd is not null &&
@@ -349,7 +345,7 @@ else
         if ((firstRender || mapRefreshPending) && CanList)
         {
             mapRefreshPending = false;
-            await JS.InvokeVoidAsync("rmsInterop.renderRoadMap", "road-map", BuildRoadMapItems(), BuildAccidentMapItems());
+            await JS.InvokeVoidAsync("rmsInterop.renderRoadMap", "road-map", BuildRoadMapItems());
         }
 
         if (editorMapPending)
@@ -369,11 +365,6 @@ else
             await LoadRoadPageDataAsync(CancellationToken.None);
             await LoadRoadMapDataAsync(CancellationToken.None);
 
-            accidents.Clear();
-            if (CanListAccidents)
-            {
-                accidents.AddRange(await AccidentApi.GetMapAsync(BuildAccidentMapQuery()));
-            }
 
             selectedRoadId = roads.FirstOrDefault()?.Id;
             mapRefreshPending = true;
@@ -483,9 +474,6 @@ else
         {
             await LoadRoadPageDataAsync(token);
             await LoadRoadMapDataAsync(token);
-            accidents.Clear();
-            if (CanListAccidents)
-                accidents.AddRange(await AccidentApi.GetMapAsync(BuildAccidentMapQuery(), token));
             selectedRoadId = roads.FirstOrDefault()?.Id;
             mapRefreshPending = true;
         }
@@ -847,36 +835,6 @@ else
     private RoadMapItem[] BuildRoadMapItems() => mapRoads.Select(road => new RoadMapItem(
         road.Id.ToString(), road.Name, RoutePaths(road.Boundary))).ToArray();
 
-    private AccidentMapItem[] BuildAccidentMapItems() => accidents.Select(accident => new AccidentMapItem(
-        accident.Id.ToString(), accident.Latitude, accident.Longitude,
-        $"ACC-{RmsUi.ShortId(accident.Id)}", RmsUi.DateTime(accident.AccidentTimeUnix))).ToArray();
-
-    private AccidentMapQuery BuildAccidentMapQuery()
-    {
-        var coordinates = mapRoads.SelectMany(road => road.Boundary.Coordinates).ToArray();
-        if (coordinates.Length == 0)
-        {
-            return new AccidentMapQuery
-            {
-                StartTime = 946684800,
-                EndTime = 4102444800,
-                Take = 5000
-            };
-        }
-
-        const double padding = 0.01;
-        return new AccidentMapQuery
-        {
-            StartTime = 946684800,
-            EndTime = 4102444800,
-            MinLatitude = Math.Max(-90, coordinates.Min(point => point.Y) - padding),
-            MaxLatitude = Math.Min(90, coordinates.Max(point => point.Y) + padding),
-            MinLongitude = Math.Max(-180, coordinates.Min(point => point.X) - padding),
-            MaxLongitude = Math.Min(180, coordinates.Max(point => point.X) + padding),
-            Take = 5000
-        };
-    }
-
     private static IReadOnlyList<IReadOnlyList<MapPoint>> RoutePaths(Geometry geometry)
     {
         static IReadOnlyList<MapPoint> Convert(Coordinate[] coordinates)
@@ -939,7 +897,6 @@ else
     private sealed record MapPoint(double Latitude, double Longitude);
     private enum RouteSelectionKind { Primary, Branch }
     private sealed record RoadMapItem(string Id, string Name, IReadOnlyList<IReadOnlyList<MapPoint>> Paths);
-    private sealed record AccidentMapItem(string Id, double Latitude, double Longitude, string Title, string Date);
     private sealed record SearchResultGroup(
         string Name,
         string Description,

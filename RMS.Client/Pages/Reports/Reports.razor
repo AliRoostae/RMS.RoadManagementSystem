@@ -19,6 +19,11 @@
         {
             <a class="btn btn-light app-button" href="/reports/humans"><i class="bi bi-people"></i> گزارش افراد</a>
         }
+        @if (CanAccess)
+        {
+            <a class="btn btn-light app-button" href="/reports/accidents"><i class="bi bi-list-columns-reverse"></i> گزارش حوادث</a>
+            <a class="btn btn-light app-button" href="/reports/accidents/map"><i class="bi bi-geo-alt"></i> نقشه حوادث</a>
+        }
         <button class="btn btn-light app-button" disabled title="API خروجی گزارش هنوز پیاده‌سازی نشده است"><i class="bi bi-download"></i> دریافت گزارش</button>
         <button class="btn btn-primary app-button" @onclick="ApplyFiltersAsync" disabled="@isLoading"><i class="bi bi-sliders"></i> به‌روزرسانی تحلیل</button>
     </Actions>

@@ -1,0 +1,26 @@
+@page "/reports/accidents/map"
+@attribute [Authorize]
+@inject IJSRuntime JS
+@inject AccidentApiService AccidentApi
+@inject RmsAuthenticationStateProvider AuthenticationState
+@implements IAsyncDisposable
+
+<PageTitle>نقشه حوادث | راه‌بان کیان</PageTitle>
+<PageHeader Title="نمایش حوادث روی نقشه" Eyebrow="گزارش‌ها" Description="نمایش نقاط حوادث بین دو تاریخ با استفاده از AccidentsController.GetMap">
+    <Actions><a class="btn btn-light app-button" href="/reports"><i class="bi bi-arrow-right"></i> بازگشت به گزارش‌ها</a></Actions>
+</PageHeader>
+@if (!CanAccess)
+{
+    <section class="panel-card access-denied-card"><span><i class="bi bi-shield-lock"></i></span><h2>دسترسی به گزارش نقشه حوادث مجاز نیست</h2></section>
+}
+else
+{
+    <section class="panel-card report-filter">
+        <div class="form-group"><label>تاریخ شروع</label><DatePickerZO SelectDate="@startDate" SelectDateChanged="value => startDate = value ?? startDate" PopupDatePickerZO="true" Format="yyyy/MM/dd" /></div>
+        <div class="form-group"><label>تاریخ پایان</label><DatePickerZO SelectDate="@endDate" SelectDateChanged="value => endDate = value ?? endDate" PopupDatePickerZO="true" Format="yyyy/MM/dd" /></div>
+        <div class="report-filter-actions"><button class="btn btn-primary app-button" type="button" @onclick="SearchAsync" disabled="@isLoading"><i class="bi bi-search"></i> جست‌وجو</button></div>
+    </section>
+    @if (!string.IsNullOrWhiteSpace(pageError)) { <div class="app-alert danger"><i class="bi bi-exclamation-circle"></i><span>@pageError</span></div> }
+    <section class="panel-card map-report-panel"><div class="panel-heading"><div><h2>نقاط حوادث</h2><p>@Persian(points.Count) نقطه در بازه انتخاب‌شده</p></div></div><div id="accident-report-map" class="accident-report-map"></div></section>
+}
+

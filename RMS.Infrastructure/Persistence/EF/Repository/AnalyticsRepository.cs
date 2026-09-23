@@ -52,7 +52,7 @@ public sealed class AnalyticsRepository(RmsDbContext db) : IAnalyticsRepository
                     person.Age,
                     person.InjuryPercentage,
                     person.DamageType,
-                    false,false))
+                    false, false))
                 .ToList();
 
             itemHuman.AddRange(itemsPeople);
@@ -98,7 +98,7 @@ public sealed class AnalyticsRepository(RmsDbContext db) : IAnalyticsRepository
                 person.Age,
                 person.InjuryPercentage,
                 person.DamageType,
-                true,person.IsDriver))
+                true, person.IsDriver))
             .ToList();
 
         itemHuman.AddRange(itemsPassenger);

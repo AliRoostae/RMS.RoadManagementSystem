@@ -126,4 +126,3 @@ public enum CarClassEnums : byte
     /// <summary>گاری یا وسیلهٔ نقلیهٔ بدون موتور برای حمل بار.</summary>
     Cart = 39
 }
-
