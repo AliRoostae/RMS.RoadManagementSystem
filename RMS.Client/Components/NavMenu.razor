@@ -1,3 +1,4 @@
+@inject NavigationManager Navigation
 @inject RmsAuthenticationStateProvider AuthenticationState
 
 <nav class="sidebar-nav" aria-label="منوی اصلی">
@@ -7,29 +8,36 @@
     </NavLink>
     @if (CanAccess(UserSection.Accidents))
     {
-        <NavLink href="/accidents" class="nav-item" @onclick="HandleNavigate"><i class="bi bi-exclamation-octagon"></i><span>حوادث</span></NavLink>
+        <div class="nav-parent-row">
+            <NavLink href="/accidents" class="nav-item" @onclick="HandleNavigate"><i class="bi bi-exclamation-octagon"></i><span>حوادث</span></NavLink>
+            <button type="button" class="nav-submenu-toggle" aria-label="نمایش یا جمع‌کردن اطلاعات وابسته" aria-expanded="@IsAccidentsMenuOpen" @onclick="ToggleAccidentsMenu">
+                <i class="bi @(IsAccidentsMenuOpen ? "bi-chevron-down" : "bi-chevron-left")"></i>
+            </button>
+        </div>
+        @if (IsAccidentsMenuOpen)
+        {
+            <div class="nav-section-label nav-subsection-label">اطلاعات وابسته</div>
+            @if (CanAccess(UserSection.Cars))
+            {
+                <NavLink href="/cars" class="nav-item nav-item-child" @onclick="HandleNavigate"><i class="bi bi-car-front"></i><span>خودروها</span></NavLink>
+            }
+            @if (CanAccess(UserSection.Passengers))
+            {
+                <NavLink href="/passengers" class="nav-item nav-item-child" @onclick="HandleNavigate"><i class="bi bi-people"></i><span>رانندگان و سرنشینان</span></NavLink>
+            }
+            @if (CanAccess(UserSection.People))
+            {
+                <NavLink href="/people" class="nav-item nav-item-child" @onclick="HandleNavigate"><i class="bi bi-person-walking"></i><span>عابر</span></NavLink>
+            }
+            @if (CanAccess(UserSection.Images))
+            {
+                <NavLink href="/images" class="nav-item nav-item-child" @onclick="HandleNavigate"><i class="bi bi-images"></i><span>تصاویر حوادث</span></NavLink>
+            }
+        }
     }
     @if (CanAccess(UserSection.Roads))
     {
         <NavLink href="/roads" class="nav-item" @onclick="HandleNavigate"><i class="bi bi-map"></i><span>راه‌ها و محدوده‌ها</span></NavLink>
-    }
-
-    <div class="nav-section-label">اطلاعات وابسته</div>
-    @if (CanAccess(UserSection.Cars))
-    {
-        <NavLink href="/cars" class="nav-item" @onclick="HandleNavigate"><i class="bi bi-car-front"></i><span>خودروها</span></NavLink>
-    }
-    @if (CanAccess(UserSection.Passengers))
-    {
-        <NavLink href="/passengers" class="nav-item" @onclick="HandleNavigate"><i class="bi bi-people"></i><span>رانندگان و سرنشینان</span></NavLink>
-    }
-    @if (CanAccess(UserSection.People))
-    {
-        <NavLink href="/people" class="nav-item" @onclick="HandleNavigate"><i class="bi bi-person-walking"></i><span>عابر</span></NavLink>
-    }
-    @if (CanAccess(UserSection.Images))
-    {
-        <NavLink href="/images" class="nav-item" @onclick="HandleNavigate"><i class="bi bi-images"></i><span>تصاویر حوادث</span></NavLink>
     }
 
     <div class="nav-section-label">مدیریت و تحلیل</div>
@@ -67,6 +75,19 @@
     private bool HasReportAccess(UserSection section) =>
         AuthenticationState.HasPermission(UserSection.Reports, UserAccessOperation.Report) &&
         AuthenticationState.HasPermission(section, UserAccessOperation.Report);
+
+    private bool? accidentsMenuExpanded;
+
+    private bool IsAccidentsMenuOpen => accidentsMenuExpanded ?? IsAccidentsRoute;
+
+    private bool IsAccidentsRoute =>
+        Navigation.Uri.Contains("/accidents", StringComparison.OrdinalIgnoreCase) ||
+        Navigation.Uri.Contains("/cars", StringComparison.OrdinalIgnoreCase) ||
+        Navigation.Uri.Contains("/passengers", StringComparison.OrdinalIgnoreCase) ||
+        Navigation.Uri.Contains("/people", StringComparison.OrdinalIgnoreCase) ||
+        Navigation.Uri.Contains("/images", StringComparison.OrdinalIgnoreCase);
+
+    private void ToggleAccidentsMenu() => accidentsMenuExpanded = !IsAccidentsMenuOpen;
 
     private Task HandleNavigate() => OnNavigate.InvokeAsync();
 
