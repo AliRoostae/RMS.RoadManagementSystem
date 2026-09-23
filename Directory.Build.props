@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Linux'))">
+    <BaseIntermediateOutputPath>obj/linux/</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin/linux/</BaseOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);obj/**;bin/**</DefaultItemExcludes>
+  </PropertyGroup>
+</Project>

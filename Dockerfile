@@ -3,6 +3,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0-noble AS build
 WORKDIR /src
 
 COPY RMS.RoadManagementSystem.slnx ./
+COPY Directory.Build.props ./
 COPY RMS.Api/RMS.Api.csproj RMS.Api/
 COPY RMS.Application/RMS.Application.csproj RMS.Application/
 COPY RMS.Client/RMS.Client.csproj RMS.Client/
