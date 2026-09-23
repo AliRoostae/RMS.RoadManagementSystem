@@ -26,6 +26,21 @@ public sealed class AnalyticsApiService(AuthenticationService authenticationServ
             uri += $"&accidentType={Convert.ToByte(query.AccidentType.Value)}";
         return GetAsync<AccidentReportResponse>(uri, token);
     }
+
+    /// <summary>گزارش صفحه‌بندی‌شده افراد را با فیلترهای HumanQueries دریافت می‌کند.</summary>
+    public Task<PagedResponse<HumanItemResponse>> GetHumanReportAsync(
+        HumanQueries query,
+        CancellationToken token = default)
+    {
+        var uri = $"api/reports/humans?skip={query.Skip}&take={query.Take}";
+        if (!string.IsNullOrWhiteSpace(query.NationalCode))
+            uri += $"&nationalCode={Uri.EscapeDataString(query.NationalCode.Trim())}";
+        if (query.IsDriver.HasValue)
+            uri += $"&isDriver={query.IsDriver.Value.ToString().ToLowerInvariant()}";
+        if (query.DamageType.HasValue)
+            uri += $"&damageType={Convert.ToByte(query.DamageType.Value)}";
+        return GetAsync<PagedResponse<HumanItemResponse>>(uri, token);
+    }
 }
 
 public sealed class AccidentApiService(AuthenticationService authenticationService)

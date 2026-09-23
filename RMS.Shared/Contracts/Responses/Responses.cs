@@ -113,7 +113,8 @@ public sealed record HumanItemResponse(
     byte Age,
     byte InjuryPercentage,
     DamageTypePersonEnum DamageType,
-    bool IsPassenger);
+    bool IsPassenger,
+    bool IsDriver);
 
 public sealed record PassengerListItemResponse(
     Guid Id,

@@ -16,7 +16,7 @@ public sealed class AnalyticsRepository(RmsDbContext db) : IAnalyticsRepository
         List<HumanItemResponse> itemHuman = [];
         int humanCount;
         // در صورتی که فیلتر راننده وارد شده  عملا بی فایده است و فقط در خودرو جستجو می کنم 
-        if (!argo.IsDriver.HasValue)
+        if (!(argo.IsDriver.HasValue && argo.IsDriver.Value))
         {
             #region People
             var sourcePeople = db.PeopleDs.AsNoTracking();
@@ -52,7 +52,7 @@ public sealed class AnalyticsRepository(RmsDbContext db) : IAnalyticsRepository
                     person.Age,
                     person.InjuryPercentage,
                     person.DamageType,
-                    false))
+                    false,false))
                 .ToList();
 
             itemHuman.AddRange(itemsPeople);
@@ -84,7 +84,8 @@ public sealed class AnalyticsRepository(RmsDbContext db) : IAnalyticsRepository
                 person.Gender,
                 person.Age,
                 person.InjuryPercentage,
-                DamageType = person.TypePersonDamage
+                DamageType = person.TypePersonDamage,
+                person.IsDriver
             })
             .ToListAsync(token);
         var itemsPassenger = rawItemsPassenger.Select(person => new HumanItemResponse(
@@ -97,7 +98,7 @@ public sealed class AnalyticsRepository(RmsDbContext db) : IAnalyticsRepository
                 person.Age,
                 person.InjuryPercentage,
                 person.DamageType,
-                true))
+                true,person.IsDriver))
             .ToList();
 
         itemHuman.AddRange(itemsPassenger);

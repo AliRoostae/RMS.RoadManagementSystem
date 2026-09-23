@@ -1,0 +1,234 @@
+@page "/reports/humans"
+@attribute [Authorize]
+@inject AnalyticsApiService AnalyticsApi
+@inject RmsAuthenticationStateProvider AuthenticationState
+
+<PageTitle>گزارش افراد | راه‌بان کیان</PageTitle>
+
+<PageHeader Title="گزارش افراد" Eyebrow="گزارشات" Description="دریافت فهرست عابر و سرنشینان بر اساس فیلترهای گزارش">
+    <Actions>
+        <a class="btn btn-light app-button" href="/reports"><i class="bi bi-arrow-right"></i> بازگشت به گزارشات</a>
+        @if (hasSearched && rows.Count > 0)
+        {
+            <span class="report-result-count"><i class="bi bi-list-check"></i> @Persian(totalCount) رکورد</span>
+        }
+    </Actions>
+</PageHeader>
+
+@if (!CanAccess)
+{
+    <section class="panel-card access-denied-card">
+        <span><i class="bi bi-shield-lock"></i></span>
+        <h2>دسترسی به گزارش افراد مجاز نیست</h2>
+        <p>برای مشاهده این گزارش، مجوز گزارش افراد و گزارشات را داشته باشید.</p>
+    </section>
+}
+else
+{
+    <section class="report-filter panel-card">
+        <div class="form-group">
+            <label for="human-report-national-code">کد ملی</label>
+            <input id="human-report-national-code" value="@nationalCode"
+                   @oninput="eventArgs => nationalCode = eventArgs.Value?.ToString() ?? string.Empty"
+                   placeholder="کد ملی را وارد کنید..." />
+        </div>
+        <div class="form-group">
+            <label for="human-report-role">نقش</label>
+            <select id="human-report-role" value="@selectedRole"
+                    @onchange="eventArgs => selectedRole = eventArgs.Value?.ToString() ?? string.Empty">
+                <option value="">همه عابرین و سرنشینان</option>
+                <option value="true">فقط رانندها</option>
+                <option value="false">بدون راننده ها</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="human-report-damage">نوع آسیب</label>
+            <select id="human-report-damage" value="@selectedDamageType"
+                    @onchange="eventArgs => selectedDamageType = eventArgs.Value?.ToString() ?? string.Empty">
+                <option value="">همه انواع آسیب</option>
+                @foreach (var value in Enum.GetValues<DamageTypePersonEnum>())
+                {
+                    <option value="@Convert.ToByte(value)">@RmsUi.DamageType(value)</option>
+                }
+            </select>
+        </div>
+        <div class="report-filter-actions">
+            <button class="btn btn-primary app-button" type="button" @onclick="SearchAsync" disabled="@isLoading">
+                <i class="bi bi-search"></i> دریافت گزارش
+            </button>
+            <button class="btn btn-light app-button" type="button" @onclick="ClearFilters" disabled="@isLoading">
+                <i class="bi bi-eraser"></i> پاک‌کردن
+            </button>
+        </div>
+    </section>
+
+    @if (!string.IsNullOrWhiteSpace(pageError))
+    {
+        <div class="app-alert danger"><i class="bi bi-exclamation-circle"></i><span>@pageError</span></div>
+    }
+
+    @if (!hasSearched)
+    {
+        <section class="panel-card report-empty-state">
+            <i class="bi bi-people"></i>
+            <h2>گزارش هنوز اجرا نشده است</h2>
+            <p>فیلترها را انتخاب کنید و برای دریافت گزارش روی دکمه دریافت گزارش بزنید.</p>
+        </section>
+    }
+    else
+    {
+        <section class="panel-card car-report-panel">
+            <div class="panel-heading">
+                <div>
+                    <h2>خروجی افراد</h2>
+                    <p>اطلاعات کامل رکوردهای برگشتی از گزارش افراد</p>
+                </div>
+            </div>
+            <div class="table-responsive">
+                @if (isLoading)
+                {
+                    <div class="table-loading"><span class="spinner-border spinner-border-sm"></span> در حال دریافت گزارش...</div>
+                }
+                else if (rows.Count == 0)
+                {
+                    <div class="empty-inline"><i class="bi bi-inbox"></i> رکوردی با فیلترهای انتخاب‌شده پیدا نشد.</div>
+                }
+                else
+                {
+                    <table class="app-table car-report-table">
+                        <thead>
+                            <tr>
+                                <th class="index-cell">ردیف</th>
+                                <th>نام و نام خانوادگی</th>
+                                <th>کد ملی</th>
+                                <th>کد حادثه</th>
+                                <th>نقش</th>
+                                <th>راننده</th>
+                                <th>جنسیت</th>
+                                <th>سن</th>
+                                <th>درصد آسیب</th>
+                                <th>نوع آسیب</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (var index = 0; index < rows.Count; index++)
+                            {
+                                var row = rows[index];
+                                <tr>
+                                    <td class="index-cell">@Persian((currentPage * PageSize) + index + 1)</td>
+                                    <td><strong>@row.FullName</strong></td>
+                                    <td>@row.NationalCode</td>
+                                    <td>@row.AccidentCode</td>
+                                    <td>@(row.IsPassenger ? "سرنشین" : "عابر")</td>
+                                    <td>@(row.IsDriver ? "✅" : "❌")</td>
+                                    <td>@RmsUi.Gender(row.Gender)</td>
+                                    <td>@Persian(row.Age)</td>
+                                    <td>@Persian(row.InjuryPercentage)%</td>
+                                    <td>@RmsUi.DamageType(row.DamageType)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+
+            @if (totalCount > 0)
+            {
+                <div class="panel-pagination">
+                    <span>نمایش @Persian(rows.Count) رکورد از @Persian(totalCount) رکورد</span>
+                    <div class="pagination-buttons">
+                        <button type="button" title="صفحه قبل" disabled="@(currentPage == 0 || isLoading)" @onclick="PreviousPageAsync"><i class="bi bi-chevron-right"></i></button>
+                        <button type="button" class="active">@Persian(currentPage + 1)</button>
+                        <button type="button" title="صفحه بعد" disabled="@(currentPage >= PageCount - 1 || isLoading)" @onclick="NextPageAsync"><i class="bi bi-chevron-left"></i></button>
+                    </div>
+                </div>
+            }
+        </section>
+    }
+}
+
+@code {
+    private const int PageSize = 25;
+    private readonly List<HumanItemResponse> rows = [];
+    private string nationalCode = string.Empty;
+    private string selectedRole = string.Empty;
+    private string selectedDamageType = string.Empty;
+    private int currentPage;
+    private int totalCount;
+    private bool isLoading;
+    private bool hasSearched;
+    private string? pageError;
+
+    private bool CanAccess => AuthenticationState.HasPermission(UserSection.Reports, UserAccessOperation.Report)
+        && AuthenticationState.HasPermission(UserSection.People, UserAccessOperation.Report);
+    private int PageCount => Math.Max(1, (int)Math.Ceiling(totalCount / (double)PageSize));
+
+    private async Task SearchAsync()
+    {
+        currentPage = 0;
+        hasSearched = true;
+        await LoadPageAsync();
+    }
+
+    private async Task LoadPageAsync()
+    {
+        isLoading = true;
+        pageError = null;
+        try
+        {
+            var result = await AnalyticsApi.GetHumanReportAsync(new HumanQueries
+            {
+                NationalCode = string.IsNullOrWhiteSpace(nationalCode) ? null : nationalCode.Trim(),
+                IsDriver = bool.TryParse(selectedRole, out var isDriver) ? isDriver : null,
+                DamageType = byte.TryParse(selectedDamageType, out var damageType) ? (DamageTypePersonEnum)damageType : null,
+                Skip = currentPage * PageSize,
+                Take = PageSize
+            });
+            rows.Clear();
+            rows.AddRange(result.Items);
+            totalCount = result.TotalCount;
+        }
+        catch (Exception exception) when (exception is ApiClientException or HttpRequestException)
+        {
+            rows.Clear();
+            totalCount = 0;
+            pageError = exception is ApiClientException apiException
+                ? apiException.Message
+                : "ارتباط با RMS.Api برقرار نشد.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task PreviousPageAsync()
+    {
+        if (currentPage == 0)
+            return;
+        currentPage--;
+        await LoadPageAsync();
+    }
+
+    private async Task NextPageAsync()
+    {
+        if (currentPage >= PageCount - 1)
+            return;
+        currentPage++;
+        await LoadPageAsync();
+    }
+
+    private void ClearFilters()
+    {
+        nationalCode = string.Empty;
+        selectedRole = string.Empty;
+        selectedDamageType = string.Empty;
+        currentPage = 0;
+        totalCount = 0;
+        rows.Clear();
+        pageError = null;
+        hasSearched = false;
+    }
+
+    private static string Persian(int value) => value.ToString("N0").TranslateDigits();
+}

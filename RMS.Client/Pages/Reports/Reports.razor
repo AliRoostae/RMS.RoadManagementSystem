@@ -15,6 +15,10 @@
         {
             <a class="btn btn-light app-button" href="/reports/cars"><i class="bi bi-car-front"></i> گزارش خودروها</a>
         }
+        @if (CanHumansReport)
+        {
+            <a class="btn btn-light app-button" href="/reports/humans"><i class="bi bi-people"></i> گزارش افراد</a>
+        }
         <button class="btn btn-light app-button" disabled title="API خروجی گزارش هنوز پیاده‌سازی نشده است"><i class="bi bi-download"></i> دریافت گزارش</button>
         <button class="btn btn-primary app-button" @onclick="ApplyFiltersAsync" disabled="@isLoading"><i class="bi bi-sliders"></i> به‌روزرسانی تحلیل</button>
     </Actions>
@@ -73,6 +77,7 @@ else
 
     private bool CanAccess => AuthenticationState.HasPermission(UserSection.Reports, UserAccessOperation.Report);
     private bool CanCarsReport => CanAccess && AuthenticationState.HasPermission(UserSection.Cars, UserAccessOperation.Report);
+    private bool CanHumansReport => CanAccess && AuthenticationState.HasPermission(UserSection.People, UserAccessOperation.Report);
     private bool CanFilterByRoad => AuthenticationState.HasPermission(UserSection.Roads, UserAccessOperation.Report);
 
     private string InsightText
