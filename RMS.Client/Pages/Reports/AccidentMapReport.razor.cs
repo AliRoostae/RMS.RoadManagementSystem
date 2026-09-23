@@ -18,18 +18,21 @@ namespace RMS.Client.Pages.Reports
         private bool CanAccess => AuthenticationState.HasPermission(UserSection.Accidents, UserAccessOperation.Report);
         protected override async Task OnInitializedAsync()
         {
-            if (CanAccess) await SearchAsync();
+            if (CanAccess)
+                await SearchAsync();
         }
         protected override async Task OnAfterRenderAsync(bool firstRender)
         {
-            if (!mapPending) return;
+            if (!mapPending)
+                return;
             mapPending = false;
             await JS.InvokeVoidAsync("rmsInterop.renderAccidentReportMap", "accident-report-map", points.Select(point => new MapPoint(
                 point.Latitude,
                 point.Longitude,
                 $"ACC-{RmsUi.ShortId(point.Id)}",
                 RmsUi.DateTime(point.AccidentTimeUnix)
-            )).ToArray()); mapRendered = true;
+            )).ToArray());
+            mapRendered = true;
         }
         private async Task SearchAsync()
         {

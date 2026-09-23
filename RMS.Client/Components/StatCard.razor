@@ -10,12 +10,4 @@
     <div class="stat-hint">@Hint</div>
 </article>
 
-@code {
-    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
-    [Parameter, EditorRequired] public string Value { get; set; } = string.Empty;
-    [Parameter, EditorRequired] public string Icon { get; set; } = "bi-activity";
-    [Parameter] public string Tone { get; set; } = "primary";
-    [Parameter] public string Trend { get; set; } = "۰٪";
-    [Parameter] public bool TrendUp { get; set; } = true;
-    [Parameter] public string Hint { get; set; } = "نسبت به ماه گذشته";
-}
+

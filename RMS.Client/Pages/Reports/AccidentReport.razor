@@ -51,26 +51,3 @@ else
     </section>
 }
 
-@code {
-    private const int PageSize = 25;
-    private readonly List<AccidentListItemResponse> rows = [];
-    private readonly Dictionary<Guid, AccidentResponse?> details = [];
-    private readonly HashSet<Guid> expandedRows = [];
-    private DateTime startDate = DateTime.Today.AddMonths(-1);
-    private DateTime endDate = DateTime.Today;
-    private string selectedRoad = string.Empty, selectedType = string.Empty, selectedWeather = string.Empty, selectedCause = string.Empty, searchTerm = string.Empty;
-    private int pageIndex, totalCount; private bool isLoading; private string? pageError;
-    private bool CanAccess => AuthenticationState.HasPermission(UserSection.Accidents, UserAccessOperation.Report);
-    private int PageCount => Math.Max(1, (int)Math.Ceiling(totalCount / (double)PageSize));
-    protected override async Task OnInitializedAsync() { if (CanAccess) await SearchAsync(); }
-    private async Task SearchAsync() { pageIndex = 0; await LoadAsync(); }
-    private async Task LoadAsync() { isLoading = true; pageError = null; try { var result = await AccidentApi.GetAllAsync(BuildQuery()); rows.Clear(); rows.AddRange(result.Items); totalCount = result.TotalCount; expandedRows.Clear(); details.Clear(); } catch (Exception ex) when (ex is ApiClientException or HttpRequestException) { pageError = ex is ApiClientException api ? api.Message : "ارتباط با RMS.Api برقرار نشد."; } finally { isLoading = false; } }
-    private AccidentQuery BuildQuery() => new() { StartTime = StartUnix, EndTime = EndUnix, Skip = pageIndex * PageSize, Take = PageSize, RoadId = Guid.TryParse(selectedRoad, out var road) ? road : null, AccidentType = byte.TryParse(selectedType, out var type) ? (AccidentTypeEnums)type : null, Weather = byte.TryParse(selectedWeather, out var weather) ? (WeatherConditionEnums)weather : null, Cause = byte.TryParse(selectedCause, out var cause) ? (AccidentCauseEnums)cause : null, SearchTerm = searchTerm };
-    private long StartUnix => new DateTimeOffset(startDate.Date, TimeZoneInfo.Local.GetUtcOffset(startDate.Date)).ToUnixTimeSeconds();
-    private long EndUnix => new DateTimeOffset(endDate.Date.AddDays(1).AddSeconds(-1), TimeZoneInfo.Local.GetUtcOffset(endDate.Date)).ToUnixTimeSeconds();
-    private async Task ToggleDetailsAsync(Guid id) { if (expandedRows.Remove(id)) return; expandedRows.Add(id); if (!details.ContainsKey(id)) { try { details[id] = await AccidentApi.GetByIdAsync(id); } catch (Exception ex) when (ex is ApiClientException or HttpRequestException) { pageError = ex is ApiClientException api ? api.Message : "دریافت جزئیات حادثه ناموفق بود."; } } }
-    private Task PreviousPageAsync() { if (pageIndex > 0) { pageIndex--; return LoadAsync(); } return Task.CompletedTask; }
-    private Task NextPageAsync() { if (pageIndex < PageCount - 1) { pageIndex++; return LoadAsync(); } return Task.CompletedTask; }
-    private async Task<IReadOnlyList<LookupOption>> SearchRoadsAsync(string term, CancellationToken token) => (await LookupApi.GetRoadsAsync(new LookupQuery { SearchTerm = term, Take = 20 }, token)).Select(road => new LookupOption(road.Id.ToString(), road.Name)).ToArray();
-    private static string Persian(int value) => value.ToString("N0").TranslateDigits();
-}

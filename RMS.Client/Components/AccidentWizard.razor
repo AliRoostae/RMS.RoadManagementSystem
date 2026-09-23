@@ -25,47 +25,4 @@
     }
 </section>
 
-@code {
-    [Parameter] public EventCallback<Guid?> AccidentIdChanged { get; set; }
 
-    private string selectedRoad = string.Empty;
-    private string selectedAccident = string.Empty;
-    private Guid? filterRoadId;
-    private DateTime filterMonth = DateTime.Now;
-    private YearMonthZO? filterMonthPickerComponent;
-
-    /// <summary>راه والد را انتخاب می‌کند و انتخاب حادثه قبلی را پاک می‌کند.</summary>
-    private async Task SelectRoadAsync(string value)
-    {
-        selectedRoad = value;
-        filterRoadId = Guid.TryParse(value, out var roadId) ? roadId : null;
-        selectedAccident = string.Empty;
-        await AccidentIdChanged.InvokeAsync(null);
-    }
-
-    /// <summary>ماه جستجوی حادثه را از تقویم سال و ماه دریافت می‌کند.</summary>
-    private async Task OnFilterMonthChanged()
-    {
-        filterMonth = filterMonthPickerComponent?.SelectDate ?? DateTime.Now;
-        selectedAccident = string.Empty;
-        await AccidentIdChanged.InvokeAsync(null);
-    }
-
-    /// <summary>فقط شناسه حادثه انتخاب‌شده را به صفحه والد برمی‌گرداند.</summary>
-    private async Task SelectAccidentAsync(string value)
-    {
-        selectedAccident = value;
-        await AccidentIdChanged.InvokeAsync(
-            Guid.TryParse(value, out var accidentId) ? accidentId : null);
-    }
-
-    /// <summary>مسیرها را فقط هنگام جستجوی کاربر از API دریافت می‌کند.</summary>
-    private async Task<IReadOnlyList<LookupOption>> SearchRoadsAsync(string term, CancellationToken token) =>
-        (await LookupApi.GetRoadsAsync(new LookupQuery { SearchTerm = term, Take = 20 }, token))
-            .Select(road => new LookupOption(road.Id.ToString(), road.Name))
-            .ToArray();
-
-    /// <summary>حوادث راه و ماه انتخاب‌شده را فقط هنگام جستجوی کاربر از API دریافت می‌کند.</summary>
-    private Task<IReadOnlyList<LookupOption>> SearchAccidentsAsync(string term, CancellationToken token) =>
-        AccidentFilterHelper.SearchAccidentsAsync(AccidentApi, filterRoadId, filterMonth, term, token);
-}

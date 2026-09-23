@@ -368,3 +368,6 @@ FodyWeavers.xsd
 # Local test projects and test sources (kept locally, not committed)
 **/*.[Tt]ests/
 **/*.[Tt]est/
+
+# Keep repository-wide EditorConfig tracked
+!.editorconfig
