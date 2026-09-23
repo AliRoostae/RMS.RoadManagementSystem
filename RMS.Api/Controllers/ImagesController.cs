@@ -20,7 +20,13 @@ public sealed class ImagesController(IImageStorageService service) : ControllerB
         var id = await service.AddImageUrlAsync(command, token);
         return id == Guid.Empty
             ? Problem(statusCode: StatusCodes.Status500InternalServerError, title: "تصویر ذخیره نشد.")
-            : CreatedAtAction(nameof(GetById), new { id }, new { id });
+            : CreatedAtAction(nameof(GetById), new
+            {
+                id
+            }, new
+            {
+                id
+            });
     }
 
     [HttpDelete("{id:guid}")]

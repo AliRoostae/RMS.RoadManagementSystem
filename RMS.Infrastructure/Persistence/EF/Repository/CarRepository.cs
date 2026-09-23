@@ -32,7 +32,8 @@ public sealed class CarRepository
     public async Task<bool> DeleteAsync(Guid argo, CancellationToken token = default)
     {
         var del = await _db.CarDs.FirstOrDefaultAsync(i => i.Id == argo, token);
-        if (del == null) return false;
+        if (del == null)
+            return false;
 
         _db.CarDs.Remove(del);
         return await _db.SaveChangesAsync(token) > 0;
@@ -153,7 +154,8 @@ public sealed class CarRepository
     public async Task<bool> UpdateAsync(BaseCarEdit argo, Guid id, CancellationToken token = default)
     {
         var find = await _db.CarDs.FirstOrDefaultAsync(i => i.Id == id, token);
-        if (find == null) return false;
+        if (find == null)
+            return false;
         _db.Entry(find).CurrentValues.SetValues(argo);
 
         return await _db.SaveChangesAsync(token) >= 0;

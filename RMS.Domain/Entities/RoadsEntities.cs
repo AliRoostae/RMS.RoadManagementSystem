@@ -1,6 +1,6 @@
+using System.ComponentModel.DataAnnotations;
 using NetTopologySuite.Geometries;
 using RMS.Shared.Validation;
-using System.ComponentModel.DataAnnotations;
 
 namespace RMS.Domain.Entities;
 
@@ -11,7 +11,10 @@ public class RoadsEntities
 {
 
     /// <summary>شناسهٔ یکتای راه یا محدودهٔ جغرافیایی.</summary>
-    public Guid Id { get; set; }
+    public Guid Id
+    {
+        get; set;
+    }
 
     /// <summary>
     /// نام راه یا عنوان محدودهٔ جغرافیایی.
@@ -32,7 +35,10 @@ public class RoadsEntities
     /// نقطه‌ای نماینده روی مسیر برای تنظیم مرکز نقشه، بزرگ‌نمایی و نمایش برچسب.
     /// </summary>
     [ValidCentroidPoint]
-    public NetTopologySuite.Geometries.Point? Centroid { get; set; }
+    public NetTopologySuite.Geometries.Point? Centroid
+    {
+        get; set;
+    }
     /// <summary>مجموعهٔ حوادث ثبت‌شده برای این راه یا محدوده.</summary>
     public ICollection<AccidentEntities> AccountList { get; set; } = new List<AccidentEntities>();
 

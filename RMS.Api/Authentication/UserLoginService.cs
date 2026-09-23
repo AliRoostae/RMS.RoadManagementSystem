@@ -1,9 +1,9 @@
-using RMS.Domain.Interfaces;
-using RMS.Shared.Contracts.Authentication;
-using RMS.Shared.Contracts.Responses;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Text.RegularExpressions;
+using RMS.Domain.Interfaces;
+using RMS.Shared.Contracts.Authentication;
+using RMS.Shared.Contracts.Responses;
 
 namespace RMS.Api.Authentication;
 

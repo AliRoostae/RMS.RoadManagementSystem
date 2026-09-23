@@ -1,6 +1,6 @@
-﻿
-using RMS.Shared.Enums;
+
 using System.ComponentModel.DataAnnotations;
+using RMS.Shared.Enums;
 
 namespace RMS.Domain.Entities;
 
@@ -12,10 +12,16 @@ public class PeopleEntities
 {
     /// <summary>شناسهٔ یکتای شخص در سامانه.</summary>
     [Key]
-    public Guid Id { get; set; }
+    public Guid Id
+    {
+        get; set;
+    }
 
     /// <summary>شناسهٔ حادثه‌ای که شخص در آن حضور داشته است.</summary>
-    public Guid FkAccident { get; set; }
+    public Guid FkAccident
+    {
+        get; set;
+    }
 
     /// <summary>
     /// کد ملی شخص.

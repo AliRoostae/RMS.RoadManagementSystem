@@ -1,8 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RMS.Domain.Interfaces;
 using RMS.Infrastructure.Persistence.EF.Core;
-using RMS.Shared.Contracts.Queries;
-using RMS.Shared.Contracts.Responses;
 
 namespace RMS.Infrastructure.Persistence.EF.Repository;
 

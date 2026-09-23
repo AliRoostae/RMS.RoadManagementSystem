@@ -1,6 +1,6 @@
+using System.ComponentModel.DataAnnotations;
 using NetTopologySuite.Geometries;
 using RMS.Shared.Enums;
-using System.ComponentModel.DataAnnotations;
 
 namespace RMS.Shared.Contracts.Responses;
 
@@ -12,20 +12,62 @@ public sealed record PagedResponse<T>(
 
 public sealed record AccidentResponse
 {
-    public Guid Id { get; init; }
-    public Guid FkIdRoad { get; init; }
-    public double Latitude { get; init; }
-    public double Longitude { get; init; }
-    public long AccidentTimeUnix { get; init; }
-    public WeatherConditionEnums Weather { get; init; }
-    public RoadConditionEnums RoadCondition { get; init; }
-    public LightingConditionEnums LightingCondition { get; init; }
-    public TrafficSignConditionEnums TrafficSignCondition { get; init; }
-    public AccidentCauseEnums AccidentCause { get; init; }
-    public AccidentTypeEnums AccidentType { get; init; }
-    public int PeopleCount { get; init; }
-    public int DamagePercentageCar { get; init; }
-    public int InjuryPercentage { get; init; }
+    public Guid Id
+    {
+        get; init;
+    }
+    public Guid FkIdRoad
+    {
+        get; init;
+    }
+    public double Latitude
+    {
+        get; init;
+    }
+    public double Longitude
+    {
+        get; init;
+    }
+    public long AccidentTimeUnix
+    {
+        get; init;
+    }
+    public WeatherConditionEnums Weather
+    {
+        get; init;
+    }
+    public RoadConditionEnums RoadCondition
+    {
+        get; init;
+    }
+    public LightingConditionEnums LightingCondition
+    {
+        get; init;
+    }
+    public TrafficSignConditionEnums TrafficSignCondition
+    {
+        get; init;
+    }
+    public AccidentCauseEnums AccidentCause
+    {
+        get; init;
+    }
+    public AccidentTypeEnums AccidentType
+    {
+        get; init;
+    }
+    public int PeopleCount
+    {
+        get; init;
+    }
+    public int DamagePercentageCar
+    {
+        get; init;
+    }
+    public int InjuryPercentage
+    {
+        get; init;
+    }
 }
 
 public sealed record AccidentListItemResponse(
@@ -47,19 +89,37 @@ public sealed record AccidentMapPointResponse(
 
 public sealed record CarResponse
 {
-    public Guid Id { get; set; }
-    public Guid FkAccident { get; set; }
+    public Guid Id
+    {
+        get; set;
+    }
+    public Guid FkAccident
+    {
+        get; set;
+    }
     public string CarName { get; set; } = string.Empty;
     public CarClassEnums CarClass { get; set; } = CarClassEnums.Unknown;
-    public int ProductionYear { get; set; }
+    public int ProductionYear
+    {
+        get; set;
+    }
     public string PlateNumber { get; set; } = string.Empty;
     public string Color { get; set; } = string.Empty;
     public string DriverPhone { get; set; } = string.Empty;
     public string DriverLicNumber { get; set; } = string.Empty;
-    public DateOnly DateLic { get; set; }
-    public byte DateLicValidity { get; set; }
+    public DateOnly DateLic
+    {
+        get; set;
+    }
+    public byte DateLicValidity
+    {
+        get; set;
+    }
     public byte DamagePercentage { get; set; } = 1;
-    public int InjuryPercentage { get; init; }
+    public int InjuryPercentage
+    {
+        get; init;
+    }
 }
 
 public sealed record CarListItemResponse(
@@ -74,7 +134,10 @@ public sealed record CarListItemResponse(
 
 public record SharedPassengerPeopleResponse
 {
-    public Guid Id { get; set; }
+    public Guid Id
+    {
+        get; set;
+    }
     public string NationalCode { get; set; } = string.Empty;
     public string PassengerFullName { get; set; } = string.Empty;
     public GenderEnums Gender { get; set; } = GenderEnums.Unknown;
@@ -86,11 +149,23 @@ public record SharedPassengerPeopleResponse
 
 public sealed record PassengerResponse : SharedPassengerPeopleResponse
 {
-    public Guid FkCar { get; set; }
-    public bool IsDriver { get; set; }
+    public Guid FkCar
+    {
+        get; set;
+    }
+    public bool IsDriver
+    {
+        get; set;
+    }
 }
 
-public sealed record PeopleResponse : SharedPassengerPeopleResponse { public Guid FkAccident { get; set; } }
+public sealed record PeopleResponse : SharedPassengerPeopleResponse
+{
+    public Guid FkAccident
+    {
+        get; set;
+    }
+}
 
 public sealed record PeopleListItemResponse(
     Guid Id,
@@ -131,18 +206,30 @@ public sealed record PassengerListItemResponse(
 
 public sealed class ImageResponse
 {
-    public Guid Id { get; set; }
-    public Guid FkAccident { get; set; }
+    public Guid Id
+    {
+        get; set;
+    }
+    public Guid FkAccident
+    {
+        get; set;
+    }
     [Required]
     public string ImageUrls { get; set; } = string.Empty;
 }
 
 public sealed class RoadResponse
 {
-    public Guid Id { get; set; }
+    public Guid Id
+    {
+        get; set;
+    }
     public string Name { get; set; } = string.Empty;
     public Geometry Boundary { get; set; } = null!;
-    public Point? Centroid { get; set; }
+    public Point? Centroid
+    {
+        get; set;
+    }
 }
 
 public sealed record RoadListItemResponse(
@@ -219,28 +306,49 @@ public sealed record AccidentReportResponse(
 
 public sealed record UserResponse
 {
-    public Guid Id { get; init; }
+    public Guid Id
+    {
+        get; init;
+    }
     public string FirstName { get; init; } = string.Empty;
     public string LastName { get; init; } = string.Empty;
     public string MobileNumber { get; init; } = string.Empty;
-    public UserRole Role { get; init; }
+    public UserRole Role
+    {
+        get; init;
+    }
     public IReadOnlyCollection<UserPermissionResponse> Permissions { get; init; } = [];
 }
 
 public sealed record UserListItemResponse
 {
-    public Guid Id { get; init; }
+    public Guid Id
+    {
+        get; init;
+    }
     public string FirstName { get; init; } = string.Empty;
     public string LastName { get; init; } = string.Empty;
     public string MobileNumber { get; init; } = string.Empty;
-    public UserRole Role { get; init; }
-    public int PermissionSectionCount { get; init; }
+    public UserRole Role
+    {
+        get; init;
+    }
+    public int PermissionSectionCount
+    {
+        get; init;
+    }
 }
 
 public sealed record UserPermissionResponse
 {
-    public UserSection Section { get; init; }
-    public UserAccessOperation Operations { get; init; }
+    public UserSection Section
+    {
+        get; init;
+    }
+    public UserAccessOperation Operations
+    {
+        get; init;
+    }
 }
 
 public sealed record AccessMetadataItem(byte Id, string Name);

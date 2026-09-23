@@ -21,7 +21,13 @@ public sealed class RoadsController(IRoad service) : ControllerBase
         var id = await service.AddAsync(command, token);
         return id == Guid.Empty
             ? Problem(statusCode: StatusCodes.Status500InternalServerError, title: "راه ذخیره نشد.")
-            : CreatedAtAction(nameof(GetById), new { id }, new { id });
+            : CreatedAtAction(nameof(GetById), new
+            {
+                id
+            }, new
+            {
+                id
+            });
     }
 
     [HttpPut("{id:guid}")]

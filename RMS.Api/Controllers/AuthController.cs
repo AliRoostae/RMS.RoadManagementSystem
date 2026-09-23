@@ -1,10 +1,10 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using RMS.Api.Authentication;
 using RMS.Application.Interface;
 using RMS.Shared.Contracts.Authentication;
-using System.Security.Claims;
 
 namespace RMS.Api.Controllers;
 

@@ -1,5 +1,5 @@
-using RMS.Shared.Enums;
 using System.Globalization;
+using RMS.Shared.Enums;
 
 namespace RMS.Client.Models;
 

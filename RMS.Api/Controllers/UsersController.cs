@@ -21,7 +21,13 @@ public sealed class UsersController(IUser service) : ControllerBase
         var id = await service.AddAsync(command, token);
         return id == Guid.Empty
             ? Problem(statusCode: StatusCodes.Status500InternalServerError, title: "کاربر ذخیره نشد.")
-            : CreatedAtAction(nameof(GetById), new { id }, new { id });
+            : CreatedAtAction(nameof(GetById), new
+            {
+                id
+            }, new
+            {
+                id
+            });
     }
 
     [HttpPut("{id:guid}")]

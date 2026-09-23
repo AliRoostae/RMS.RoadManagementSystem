@@ -1,8 +1,8 @@
+using System.Net;
+using System.Net.Http.Json;
 using RMS.Shared.Contracts.Commands;
 using RMS.Shared.Contracts.Queries;
 using RMS.Shared.Contracts.Responses;
-using System.Net;
-using System.Net.Http.Json;
 
 namespace RMS.Client.Services;
 

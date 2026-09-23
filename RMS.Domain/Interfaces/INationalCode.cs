@@ -1,6 +1,3 @@
-﻿using RMS.Shared.Contracts.Queries;
-using RMS.Shared.Contracts.Responses;
-
 namespace RMS.Domain.Interfaces;
 
 

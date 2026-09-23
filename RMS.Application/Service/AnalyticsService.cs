@@ -1,9 +1,9 @@
+using System.ComponentModel.DataAnnotations;
 using RMS.Application.Excep;
 using RMS.Application.Interface;
 using RMS.Domain.Interfaces;
 using RMS.Shared.Contracts.Queries;
 using RMS.Shared.Contracts.Responses;
-using System.ComponentModel.DataAnnotations;
 
 namespace RMS.Application.Service;
 

@@ -1,9 +1,9 @@
+using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using RMS.Api.Authentication;
 using RMS.Api.Authorization;
-using System.Text;
 
 namespace RMS.Api.Api.Configuration;
 

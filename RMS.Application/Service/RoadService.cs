@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Mapster;
 using NetTopologySuite.Geometries;
 using RMS.Application.Excep;
@@ -8,7 +9,6 @@ using RMS.Shared.Contracts.Commands;
 using RMS.Shared.Contracts.DTOs;
 using RMS.Shared.Contracts.Queries;
 using RMS.Shared.Contracts.Responses;
-using System.ComponentModel.DataAnnotations;
 
 namespace RMS.Application.Service;
 
@@ -22,22 +22,26 @@ public sealed class RoadService(
     public async Task<Guid> AddAsync(CreateRoadCommand argo, CancellationToken token = default)
     {
         ValidateAndNormalizeRoute(argo);
-        if (await _repRoad.DuplicateNameAsync(argo.Name, token)) throw new InsufficientExecutionStackException("نام ارسالی تکراری است ");
+        if (await _repRoad.DuplicateNameAsync(argo.Name, token))
+            throw new InsufficientExecutionStackException("نام ارسالی تکراری است ");
 
 
         var inser = argo.Adapt<RoadsEntities>();
         inser.Id = Guid.NewGuid();
         if (await _repRoad.AddAsync(inser, token))
             return inser.Id;
-        else return Guid.Empty;
+        else
+            return Guid.Empty;
 
     }
 
     /// <inheritdoc/>
     public async Task<bool> DeleteAsync(DeleteRoadCommand command, CancellationToken token = default)
     {
-        if (command.Id == Guid.Empty) throw new ValidationException("شناسهٔ راه الزامی است.");
-        if (await _repAcc.AnySubsetRoadAsync(command.Id, token)) throw new InvalidOperationException("برای مسیر تصادف ثبت شده قابل حذف نیست");
+        if (command.Id == Guid.Empty)
+            throw new ValidationException("شناسهٔ راه الزامی است.");
+        if (await _repAcc.AnySubsetRoadAsync(command.Id, token))
+            throw new InvalidOperationException("برای مسیر تصادف ثبت شده قابل حذف نیست");
         return await _repRoad.DeleteAsync(command.Id, token);
 
     }
@@ -95,9 +99,12 @@ public sealed class RoadService(
     public async Task<bool> UpdateAsync(UpdateRoadCommand argo, CancellationToken token = default)
     {
         ValidateAndNormalizeRoute(argo);
-        if (argo.Id == Guid.Empty) throw new ValidationException("شناسهٔ راه الزامی است.");
-        if (!await _repRoad.AnyAsync(argo.Id, token)) throw new KeyNotFoundException(" کد ارسالی یافت نشد");
-        if (await _repRoad.DuplicateEditNameAsync(argo.Name, argo.Id, token)) throw new InsufficientExecutionStackException("نام ارسالی تکراری است ");
+        if (argo.Id == Guid.Empty)
+            throw new ValidationException("شناسهٔ راه الزامی است.");
+        if (!await _repRoad.AnyAsync(argo.Id, token))
+            throw new KeyNotFoundException(" کد ارسالی یافت نشد");
+        if (await _repRoad.DuplicateEditNameAsync(argo.Name, argo.Id, token))
+            throw new InsufficientExecutionStackException("نام ارسالی تکراری است ");
 
 
         return await _repRoad.UpdateAsync(argo, argo.Id, token);

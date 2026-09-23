@@ -36,7 +36,8 @@ public sealed class AccidentRepository
     public async Task<bool> DeleteAsync(Guid argo, CancellationToken token = default)
     {
         var find = await _db.AccidentDs.FirstOrDefaultAsync(a => a.Id == argo, token);
-        if (find == null) return false;
+        if (find == null)
+            return false;
         _db.AccidentDs.Remove(find);
         return await _db.SaveChangesAsync(token) > 0;
     }
@@ -203,7 +204,8 @@ public sealed class AccidentRepository
     public async Task<bool> UpdateAsync(BaseAccident argo, Guid id, CancellationToken token = default)
     {
         var find = await _db.AccidentDs.FirstOrDefaultAsync(a => a.Id == id, token);
-        if (find == null) return false;
+        if (find == null)
+            return false;
         _db.Entry(find).CurrentValues.SetValues(argo);
         return await _db.SaveChangesAsync(token) >= 0;
     }

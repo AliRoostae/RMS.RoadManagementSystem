@@ -1,7 +1,7 @@
+using System.Globalization;
 using RMS.Client.Models;
 using RMS.Shared.Contracts.Queries;
 using RMS.Shared.Enums;
-using System.Globalization;
 
 namespace RMS.Client.Services;
 

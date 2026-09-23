@@ -21,7 +21,13 @@ public sealed class PassengersController(IPassenger service) : ControllerBase
         var id = await service.AddAsync(command, token);
         return id == Guid.Empty
             ? Problem(statusCode: StatusCodes.Status500InternalServerError, title: "سرنشین ذخیره نشد.")
-            : CreatedAtAction(nameof(GetById), new { id }, new { id });
+            : CreatedAtAction(nameof(GetById), new
+            {
+                id
+            }, new
+            {
+                id
+            });
     }
 
     [HttpPut("{id:guid}")]

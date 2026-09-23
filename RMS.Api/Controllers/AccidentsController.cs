@@ -23,7 +23,13 @@ public sealed class AccidentsController(IAccident service) : ControllerBase
         var id = await service.AddAsync(command, token);
         return id == Guid.Empty
             ? Problem(statusCode: StatusCodes.Status500InternalServerError, title: "حادثه ذخیره نشد.")
-            : CreatedAtAction(nameof(GetById), new { id }, new { id });
+            : CreatedAtAction(nameof(GetById), new
+            {
+                id
+            }, new
+            {
+                id
+            });
     }
 
     /// <summary>اطلاعات حادثه را ویرایش می‌کند.</summary>

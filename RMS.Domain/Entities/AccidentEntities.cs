@@ -1,5 +1,5 @@
-﻿using RMS.Shared.Enums;
 using System.ComponentModel.DataAnnotations;
+using RMS.Shared.Enums;
 
 
 namespace RMS.Domain.Entities;
@@ -11,24 +11,36 @@ public class AccidentEntities
 {
     /// <summary>شناسهٔ یکتای حادثه.</summary>
     [Key]
-    public Guid Id { get; set; }
+    public Guid Id
+    {
+        get; set;
+    }
 
     /// <summary>
     /// شناسهٔ راه یا محدودهٔ جغرافیایی مرتبط با حادثه.
     /// </summary>
 
-    public Guid FkIdRoad { get; set; }
+    public Guid FkIdRoad
+    {
+        get; set;
+    }
     /// <summary>
     /// عرض جغرافیایی (Latitude) محل تصادف
     /// </summary>
     [Range(-90, 90, ErrorMessage = "عرض جغرافیایی باید بین -90 تا 90 درجه باشد.")]
-    public double Latitude { get; set; }
+    public double Latitude
+    {
+        get; set;
+    }
 
     /// <summary>
     /// طول جغرافیایی (Longitude) محل تصادف
     /// </summary>
     [Range(-180, 180, ErrorMessage = "طول جغرافیایی باید بین -180 تا 180 درجه باشد.")]
-    public double Longitude { get; set; }
+    public double Longitude
+    {
+        get; set;
+    }
 
 
     /// <summary>

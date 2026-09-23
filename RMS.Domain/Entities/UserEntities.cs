@@ -1,5 +1,5 @@
-using RMS.Shared.Enums;
 using System.ComponentModel.DataAnnotations;
+using RMS.Shared.Enums;
 
 namespace RMS.Domain.Entities;
 
@@ -8,7 +8,10 @@ public class UserEntities
 {
     /// <summary>شناسهٔ یکتای کاربر.</summary>
     [Key]
-    public Guid Id { get; set; }
+    public Guid Id
+    {
+        get; set;
+    }
 
     /// <summary>نام کاربر.</summary>
     [Required, MaxLength(50)]
@@ -37,11 +40,20 @@ public class UserEntities
 public class UserPermissionEntities
 {
     /// <summary>شناسهٔ کاربری که این مجوز برای او ثبت شده است.</summary>
-    public Guid FkUser { get; set; }
+    public Guid FkUser
+    {
+        get; set;
+    }
     /// <summary>بخشی که مجوز روی آن اعمال می‌شود.</summary>
-    public UserSection Section { get; set; }
+    public UserSection Section
+    {
+        get; set;
+    }
     /// <summary>عملیات مجاز در بخش.</summary>
-    public UserAccessOperation Operations { get; set; }
+    public UserAccessOperation Operations
+    {
+        get; set;
+    }
     /// <summary>کاربر صاحب مجوز.</summary>
     public UserEntities User { get; set; } = null!;
 }

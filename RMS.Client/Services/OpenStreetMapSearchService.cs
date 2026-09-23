@@ -1,8 +1,8 @@
-using NetTopologySuite.Geometries;
-using NetTopologySuite.Simplify;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json;
+using NetTopologySuite.Geometries;
+using NetTopologySuite.Simplify;
 
 namespace RMS.Client.Services;
 

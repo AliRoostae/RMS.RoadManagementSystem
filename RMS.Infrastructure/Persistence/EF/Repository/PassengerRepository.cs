@@ -25,7 +25,8 @@ public sealed class PassengerRepository
     public async Task<bool> DeleteAsync(Guid argo, CancellationToken token = default)
     {
         var find = await _db.PassengerDs.FirstOrDefaultAsync(i => i.Id == argo, token);
-        if (find == null) return false;
+        if (find == null)
+            return false;
         _db.PassengerDs.Remove(find);
         return await _db.SaveChangesAsync(token) > 0;
     }
@@ -140,7 +141,8 @@ IQueryable<PassengerEntities> query)
     public async Task<bool> UpdateAsync(BasePassenger argo, Guid id, CancellationToken token = default)
     {
         var find = await _db.PassengerDs.FirstOrDefaultAsync(i => i.Id == id, token);
-        if (find == null) return false;
+        if (find == null)
+            return false;
         _db.Entry(find).CurrentValues.SetValues(argo);
         return await _db.SaveChangesAsync(token) >= 0;
 

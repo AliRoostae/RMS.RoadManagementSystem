@@ -40,7 +40,8 @@ public sealed class ImageRepository
     public async Task<string> DeleteAsync(Guid imageId, CancellationToken token = default)
     {
         var find = await _db.ImageDs.FirstOrDefaultAsync(i => i.Id == imageId, token);
-        if (find == null) return string.Empty;
+        if (find == null)
+            return string.Empty;
         _db.ImageDs.Remove(find);
         await _db.SaveChangesAsync(token);
         return find.ImageUrls;
@@ -72,7 +73,8 @@ IQueryable<ImageEntities> query)
     /// <summary>جزئیات یک تصویر را می‌خواند.</summary>
     public async Task<ImageResponse?> GetAsync(Guid imageId, CancellationToken token = default)
     {
-        var sor = _db.ImageDs.AsNoTracking().Where(I => I.Id == imageId); ;
+        var sor = _db.ImageDs.AsNoTracking().Where(I => I.Id == imageId);
+        ;
 
         return await ProjectToResponse(sor).FirstOrDefaultAsync(I => I.Id == imageId, token);
     }

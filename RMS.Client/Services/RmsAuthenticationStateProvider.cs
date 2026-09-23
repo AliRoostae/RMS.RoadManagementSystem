@@ -1,7 +1,7 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Authorization;
 using RMS.Shared.Contracts.Responses;
 using RMS.Shared.Enums;
-using System.Security.Claims;
 
 namespace RMS.Client.Services;
 
@@ -49,7 +49,10 @@ public sealed class RmsAuthenticationStateProvider(AuthSessionStore sessionStore
         if (session is null)
             return;
 
-        session = session with { User = user };
+        session = session with
+        {
+            User = user
+        };
         await sessionStore.SetAsync(session);
         NotifyAuthenticationStateChanged(Task.FromResult(CreateState(session)));
     }

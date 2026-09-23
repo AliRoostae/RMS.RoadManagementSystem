@@ -10,7 +10,10 @@ public sealed class ApiClientException(
     IReadOnlyDictionary<string, string[]>? validationErrors = null) : Exception(message)
 {
     public HttpStatusCode StatusCode { get; } = statusCode;
-    public IReadOnlyDictionary<string, string[]> ValidationErrors { get; } =
+    public IReadOnlyDictionary<string, string[]> ValidationErrors
+    {
+        get;
+    } =
         validationErrors ?? new Dictionary<string, string[]>();
 
     public static async Task<ApiClientException> FromResponseAsync(
@@ -46,8 +49,17 @@ public sealed class ApiClientException(
 
     private sealed class ApiProblemDetails
     {
-        public string? Title { get; set; }
-        public string? Detail { get; set; }
-        public Dictionary<string, string[]>? Errors { get; set; }
+        public string? Title
+        {
+            get; set;
+        }
+        public string? Detail
+        {
+            get; set;
+        }
+        public Dictionary<string, string[]>? Errors
+        {
+            get; set;
+        }
     }
 }

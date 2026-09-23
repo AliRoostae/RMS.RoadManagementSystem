@@ -1,7 +1,7 @@
-using Microsoft.AspNetCore.Authorization;
-using RMS.Application.Interface;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using RMS.Application.Interface;
 
 namespace RMS.Api.Authorization;
 

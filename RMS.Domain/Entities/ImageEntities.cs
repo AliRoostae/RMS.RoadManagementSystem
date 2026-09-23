@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace RMS.Domain.Entities;
 
@@ -6,10 +6,16 @@ public class ImageEntities
 {
     /// <summary>شناسهٔ یکتای تصویر در سامانه.</summary>
     [Key]
-    public Guid Id { get; set; }
+    public Guid Id
+    {
+        get; set;
+    }
 
     /// <summary>شناسهٔ حادثه‌ای که تصویر در آن درگیر بوده است.</summary>
-    public Guid FkAccident { get; set; }
+    public Guid FkAccident
+    {
+        get; set;
+    }
 
     /// <summary>حادثه‌ای که تصویر به آن تعلق دارد.</summary>
     public AccidentEntities Accident { get; set; } = null!;

@@ -31,7 +31,8 @@ public sealed class RoadRepository
     public async Task<bool> DeleteAsync(Guid argo, CancellationToken token = default)
     {
         var find = await _db.RoadsDs.FirstOrDefaultAsync(i => i.Id == argo, token);
-        if (find == null) return false;
+        if (find == null)
+            return false;
         _db.RoadsDs.Remove(find);
         return await _db.SaveChangesAsync(token) > 0;
     }
@@ -206,7 +207,8 @@ IQueryable<RoadsEntities> query)
     public async Task<bool> UpdateAsync(BaseRoads argo, Guid id, CancellationToken token = default)
     {
         var find = await _db.RoadsDs.FirstOrDefaultAsync(i => i.Id == id, token);
-        if (find == null) return false;
+        if (find == null)
+            return false;
         _db.Entry(find).CurrentValues.SetValues(argo);
         return await _db.SaveChangesAsync(token) >= 0;
     }

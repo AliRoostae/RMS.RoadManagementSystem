@@ -1,5 +1,5 @@
-using RMS.Shared.Contracts.Responses;
 using System.ComponentModel.DataAnnotations;
+using RMS.Shared.Contracts.Responses;
 
 namespace RMS.Shared.Contracts.Authentication;
 

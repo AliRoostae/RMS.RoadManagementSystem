@@ -292,16 +292,43 @@ public sealed class AnalyticsRepository(RmsDbContext db) : IAnalyticsRepository
 
     private sealed class AccidentMetric
     {
-        public Guid Id { get; init; }
-        public long AccidentTimeUnix { get; init; }
-        public Guid RoadId { get; init; }
+        public Guid Id
+        {
+            get; init;
+        }
+        public long AccidentTimeUnix
+        {
+            get; init;
+        }
+        public Guid RoadId
+        {
+            get; init;
+        }
         public string RoadName { get; init; } = string.Empty;
-        public RMS.Shared.Enums.AccidentTypeEnums Type { get; init; }
-        public RMS.Shared.Enums.AccidentCauseEnums Cause { get; init; }
-        public RMS.Shared.Enums.WeatherConditionEnums Weather { get; init; }
-        public RMS.Shared.Enums.RoadConditionEnums RoadCondition { get; init; }
-        public int PeopleCount { get; init; }
-        public double InjuryPercentage { get; init; }
+        public RMS.Shared.Enums.AccidentTypeEnums Type
+        {
+            get; init;
+        }
+        public RMS.Shared.Enums.AccidentCauseEnums Cause
+        {
+            get; init;
+        }
+        public RMS.Shared.Enums.WeatherConditionEnums Weather
+        {
+            get; init;
+        }
+        public RMS.Shared.Enums.RoadConditionEnums RoadCondition
+        {
+            get; init;
+        }
+        public int PeopleCount
+        {
+            get; init;
+        }
+        public double InjuryPercentage
+        {
+            get; init;
+        }
     }
 
     private sealed record AnalyticsTotals(

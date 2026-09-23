@@ -1,9 +1,9 @@
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
-using RMS.Domain.Entities;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using RMS.Domain.Entities;
 
 namespace RMS.Api.Authentication;
 

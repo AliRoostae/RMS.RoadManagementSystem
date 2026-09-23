@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using RMS.Application.Controlr;
 using RMS.Application.Excep;
 using RMS.Application.Interface;
@@ -8,7 +9,6 @@ using RMS.Shared.Contracts.Commands;
 using RMS.Shared.Contracts.Queries;
 using RMS.Shared.Contracts.Responses;
 using RMS.Shared.Enums;
-using System.ComponentModel.DataAnnotations;
 
 namespace RMS.Application.Service;
 

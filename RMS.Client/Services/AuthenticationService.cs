@@ -1,8 +1,8 @@
-using RMS.Shared.Contracts.Authentication;
-using RMS.Shared.Contracts.Responses;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using RMS.Shared.Contracts.Authentication;
+using RMS.Shared.Contracts.Responses;
 
 namespace RMS.Client.Services;
 

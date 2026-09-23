@@ -1,7 +1,7 @@
+using System.ComponentModel.DataAnnotations;
 using RMS.Domain.Interfaces;
 using RMS.Domain.Security;
 using RMS.Shared.Enums;
-using System.ComponentModel.DataAnnotations;
 
 namespace RMS.Domain.Rules;
 
