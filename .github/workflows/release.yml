@@ -123,7 +123,7 @@ jobs:
         run: docker build --target test --tag rms-build-test:${{ github.run_id }} .
 
   release:
-    needs: [publish, docker]
+    needs: [validate, publish, docker]
     runs-on: ubuntu-latest
     permissions:
       contents: write
